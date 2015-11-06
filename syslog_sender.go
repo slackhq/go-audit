@@ -5,6 +5,6 @@ import (
 )
 
 func logLine(data string) {
-	my_log, _ := syslog.Dial("", "", syslog.LOG_INFO, "go-auditd")
+	my_log, _ := syslog.Dial("", "", syslog.LOG_INFO, "auditd")
 	my_log.Write([]byte(data))
 }
