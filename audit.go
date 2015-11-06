@@ -4,9 +4,12 @@ package main
 import (
 	_ "bufio"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
+	"os/exec"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 )
 
@@ -76,7 +79,34 @@ func profile() {
 	pprof.WriteHeapProfile(f2)
 }
 
+func loadConfig() {
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		fmt.Println("Log not found. Running in default mode. (forwarding all events to syslog)")
+		return
+	}
+	if viper.GetBool("canary") {
+		go canaryGo(viper.GetString("host"), viper.GetString("port"))
+	}
+	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
+		for _, v := range rules {
+			var _ = v
+			v := strings.Fields(v)
+			err := exec.Command("auditctl", v...).Start()
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	} else {
+		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
+	}
+}
+
 func main() {
+
+	loadConfig()
 
 	eventJsonChannel := make(chan string)
 	//This buffer holds partial events because they come as associated but separate lines from the kernel
