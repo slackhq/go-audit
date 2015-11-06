@@ -80,11 +80,12 @@ func profile() {
 }
 
 func loadConfig() {
-	viper.SetConfigName("config")
+	viper.SetConfigName("go-audit")
+	viper.AddConfigPath("/etc/audit")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		fmt.Println("Log not found. Running in default mode. (forwarding all events to syslog)")
+		fmt.Println("Config not found. Running in default mode. (forwarding all events to syslog)")
 		return
 	}
 	if viper.GetBool("canary") {
