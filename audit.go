@@ -20,9 +20,10 @@ var count int
 
 func genericPrinter(c <-chan string) {
 	for {
-		if ping(&count, 500) == true {
-			fmt.Println(count)
-		}
+		//Uncomment this bit for some rate messages when debugging
+		//if ping(&count, 500) == true {
+		//	fmt.Println(count)
+		//}
 		data := <-c
 		var _ = data
 		logLine(data)
