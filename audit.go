@@ -16,8 +16,6 @@ const (
 
 var count int
 
-//var uidMap = map[string]string{}
-
 func genericPrinter(c <-chan string) {
 	for {
 		//Uncomment this bit for some rate messages when debugging
