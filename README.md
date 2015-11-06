@@ -1,9 +1,8 @@
 # go-audit
-A replacement for linux auditd, written in go.
 
 ### About
 
-go-audit is a replacement for the auditd daemon that ships with many distros.
+go-audit is an alternative to the auditd daemon that ships with many distros.
 After having created an [auditd audisp](https://people.redhat.com/sgrubb/audit/) plugin to convert audit logs to json, 
 I became interested in creating a replacement for the existing daemon.
 
