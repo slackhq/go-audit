@@ -79,17 +79,22 @@ func parseArgs(m map[string]string) {
 			element := fmt.Sprintf("a%d", i)
 			//If surrounded by quotes, it is a literal. Just remove the double quotes.
 			//If not surrounded by quotes, it is hex encoded. Decode the text.
-			if m[element][0] == '"' {
-				m[element] = strings.Trim(m[element], "\"")
-				command = append(command, ' ')
-				command = append(command, m[element]...)
+			if len(m[element]) > 0 {
+				if m[element][0] == '"' {
+					m[element] = strings.Trim(m[element], "\"")
+					command = append(command, ' ')
+					command = append(command, m[element]...)
 
+				} else {
+					n, _ := hex.DecodeString(m[element])
+					command = append(command, ' ')
+					command = append(command, n...)
+					m[element] = string(n)
+				}
 			} else {
-				n, _ := hex.DecodeString(m[element])
-				command = append(command, ' ')
-				command = append(command, n...)
-				m[element] = string(n)
+				log.Output(1, string("Failed to parse args in "+fmt.Sprintf("%s", m)))
 			}
+
 		}
 		//Store assembled command text into "command" key in passed map
 		//Drop the first character, which is always a space
