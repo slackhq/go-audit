@@ -89,7 +89,7 @@ func loadConfig() {
 		return
 	}
 	if viper.GetBool("canary") {
-		go canaryGo(viper.GetString("host"), viper.GetString("port"))
+		go canaryGo(viper.GetString("canary_host"), viper.GetString("canary_port"))
 	}
 	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
 		for _, v := range rules {
