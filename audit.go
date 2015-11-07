@@ -1,4 +1,6 @@
 //There is one rule here. "thou shall not block"
+//Slack Technologies, Inc 2015
+//Ryan Huber
 package main
 
 import (
