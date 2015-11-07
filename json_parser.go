@@ -92,7 +92,8 @@ func parseArgs(m map[string]string) {
 			}
 		}
 		//Store assembled command text into "command" key in passed map
-		m["command"] = string(command)
+		//Drop the first character, which is always a space
+		m["command"] = string(command)[1:]
 	}
 }
 

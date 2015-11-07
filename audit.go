@@ -28,7 +28,6 @@ func genericPrinter(c <-chan string) {
 		//	fmt.Println(count)
 		//}
 		data := <-c
-		var _ = data
 		logLine(data)
 		//fmt.Println(data)
 	}
