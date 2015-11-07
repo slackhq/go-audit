@@ -13,7 +13,20 @@ I became interested in creating a replacement for the existing daemon.
 * Pluggable pipelines : Reports to syslog by default, but easily extended via channels
 * Connects to the linux kernel via netlink (info [here](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/tree/kernel/audit.c?id=refs/tags/v3.14.56) and [here](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/audit.h?h=linux-3.14.y))
 
-##### Example Config
+##### Installation
+
+1. Install [golang](https://golang.org/doc/install)
+
+2. Build the binary
+  git clone (this repo)
+  cd go-audit
+  go build
+
+3. Copy binary `go-audit` to wherever you'd like
+
+##### Example Config 
+
+_Note: _ Configuration must be in /etc/audit/go-audit.yaml or cwd
 
 ```
 canary:
