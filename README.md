@@ -17,10 +17,14 @@ I became interested in creating a replacement for the existing daemon.
 
 1. Install [golang](https://golang.org/doc/install)
 
-2. Build the binary
+2.
+
+```
+  Build the binary
   git clone (this repo)
   cd go-audit
   go build
+```
 
 3. Copy binary `go-audit` to wherever you'd like
 
