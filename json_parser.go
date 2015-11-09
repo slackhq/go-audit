@@ -104,7 +104,7 @@ func parseArgs(m map[string]string) {
 					m[element] = string(n)
 				}
 			} else {
-				log.Output(1, string("Failed to parse args in "+fmt.Sprintf("%s", m)))
+				log.Printf("Failed to parse args in " + fmt.Sprintf("%s", m))
 			}
 
 		}
