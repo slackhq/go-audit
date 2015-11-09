@@ -8,6 +8,12 @@ import (
 	"syscall"
 )
 
+const (
+	MAX_AUDIT_MESSAGE_LENGTH = 8970
+	AUDIT_SYSCALL            = 1300
+	AUDIT_EOE                = 1320
+)
+
 var Endianness = binary.LittleEndian
 var sequenceNumber uint32
 
@@ -38,6 +44,13 @@ type NetlinkConnection struct {
 type AuditRequest struct {
 	n NetlinkPacket
 	a AuditStatusPayload
+}
+
+func readNetlinkPacketHeader(data []byte) NetlinkPacket {
+	b := NetlinkPacket{}
+	buf := bytes.NewReader(data)
+	binary.Read(buf, Endianness, &b)
+	return b
 }
 
 //Generates a fresh netlinkpacket object, which is the base packet for talking to the kernel

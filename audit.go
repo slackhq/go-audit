@@ -15,10 +15,6 @@ import (
 	"syscall"
 )
 
-const (
-	MAX_AUDIT_MESSAGE_LENGTH = 8970
-)
-
 var count int
 
 func genericPrinter(c <-chan string) {
@@ -122,8 +118,8 @@ func main() {
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
 		data, _ := conn.Receive()
+		header := readNetlinkPacketHeader(data[:16])
 		dstring := fmt.Sprintf("%s", data[16:])
-		makeJsonString(eventBuffer, dstring, eventJsonChannel)
-
+		makeJsonString(eventBuffer, header.Type, dstring, eventJsonChannel)
 	}
 }

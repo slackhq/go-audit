@@ -15,19 +15,17 @@ var uidMap = map[string]user.User{}
 //This does the heavy lifting of making auditd messages into json.
 //It is NOT thread (goroutine) safe, as it uses two shared global maps
 //It can be made threadsafe by locking these if performance becomes an issue.
-func makeJsonString(evBuf map[int]map[string]string, dstring string, c chan<- string) {
+func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring string, c chan<- string) {
 	data := strings.Fields(dstring)
 	_, seq := parseAuditHeader(data[0])
 	if _, ok := evBuf[seq]; ok == false {
 		evBuf[seq] = make(map[string]string)
 	}
-	//End of the event - send to channel to process
-	//This is a brutal hack and we need to detect the EOE properly
-	if len(data) == 1 {
-		c <- mapToJsonString(evBuf[seq])
-		delete(evBuf, seq)
-	}
 	splitz := []string{}
+
+	//Add in some additional data
+	evBuf[seq]["netlink_type"] = fmt.Sprintf("%d", dtype)
+	evBuf[seq]["auditd_seq"] = fmt.Sprintf("%d", seq)
 
 	//Divide into key value pairs for conversion to json
 	for i := 0; i < len(data); i++ {
@@ -36,6 +34,10 @@ func makeJsonString(evBuf map[int]map[string]string, dstring string, c chan<- st
 		switch len(splitz) {
 		//This means we found a key/value pair
 		case 2:
+			//leaving this here to test overwritten values
+			//if evBuf[seq][splitz[0]] != "" {
+			//	fmt.Println("overwrite! ", splitz[0])
+			//}
 			evBuf[seq][splitz[0]] = splitz[1]
 			switch splitz[0] {
 			//Get arg count and generate complete "command" element.
@@ -53,6 +55,16 @@ func makeJsonString(evBuf map[int]map[string]string, dstring string, c chan<- st
 		default:
 			log.Fatal("unexpected split: ", splitz)
 		}
+	}
+	switch {
+	//If the message is anything from 13xx(audit) but not 1320, lets combine them so don't output yet
+	case (dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319):
+		//fmt.Println(evBuf[seq])
+	default:
+		c <- mapToJsonString(evBuf[seq])
+		delete(evBuf, seq)
+		//End of the event - send to channel to process
+		//This is a brutal hack and we need to detect the EOE properly
 	}
 
 }
