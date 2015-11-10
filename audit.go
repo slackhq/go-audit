@@ -109,7 +109,5 @@ func main() {
 		if jstring != "" {
 			logLine(jstring)
 		}
-		fmt.Println(len(eventBuffer))
-
 	}
 }
