@@ -61,8 +61,9 @@ func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring strin
 	case (dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319):
 		//fmt.Println(evBuf[seq])
 	default:
-		return mapToJsonString(evBuf[seq])
+		jstring := mapToJsonString(evBuf[seq])
 		delete(evBuf, seq)
+		return jstring
 		//End of the event - send to channel to process
 		//This is a brutal hack and we need to detect the EOE properly
 	}
