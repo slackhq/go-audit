@@ -4,15 +4,15 @@
 package main
 
 import (
-	_ "bufio"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"os/exec"
 	"runtime/pprof"
 	"strings"
 	"syscall"
+
+	"github.com/spf13/viper"
 )
 
 var count int
