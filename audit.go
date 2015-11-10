@@ -105,6 +105,10 @@ func main() {
 		data, _ := conn.Receive()
 		header := readNetlinkPacketHeader(data[:16])
 		dstring := fmt.Sprintf("%s", data[16:])
-		logLine(makeJsonString(eventBuffer, header.Type, dstring))
+		jstring := makeJsonString(eventBuffer, header.Type, dstring)
+		if jstring != "" {
+			logLine(jstring)
+		}
+
 	}
 }
