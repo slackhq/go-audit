@@ -17,18 +17,6 @@ import (
 
 var count int
 
-func genericPrinter(c <-chan string) {
-	for {
-		//Uncomment this bit for some rate messages when debugging
-		//if ping(&count, 500) == true {
-		//	fmt.Println(count)
-		//}
-		data := <-c
-		logLine(data)
-		//fmt.Println(data)
-	}
-}
-
 func ping(count *int, interval int) bool {
 	*count++
 	return (*count % interval) == 0
@@ -92,9 +80,9 @@ func loadConfig() {
 		for _, v := range rules {
 			var _ = v
 			v := strings.Fields(v)
-			err := exec.Command("auditctl", v...).Start()
+			err := exec.Command("auditctl", v...).Run()
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println("auditctl exit info: ", err)
 			}
 		}
 	} else {
@@ -106,11 +94,8 @@ func main() {
 
 	loadConfig()
 
-	eventJsonChannel := make(chan string)
 	//This buffer holds partial events because they come as associated but separate lines from the kernel
 	eventBuffer := make(map[int]map[string]string)
-
-	go genericPrinter(eventJsonChannel)
 
 	conn := connect()
 	startFlow(conn)
@@ -120,6 +105,6 @@ func main() {
 		data, _ := conn.Receive()
 		header := readNetlinkPacketHeader(data[:16])
 		dstring := fmt.Sprintf("%s", data[16:])
-		makeJsonString(eventBuffer, header.Type, dstring, eventJsonChannel)
+		logLine(makeJsonString(eventBuffer, header.Type, dstring))
 	}
 }

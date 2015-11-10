@@ -4,11 +4,13 @@ import (
 	"log/syslog"
 )
 
-var my_log *syslog.Writer
+var sysLog *syslog.Writer
 
 func logLine(data string) {
-	if my_log == nil {
-		my_log, _ = syslog.Dial("", "", syslog.LOG_INFO, "auditd")
+	if sysLog == nil {
+		sysLog, _ = syslog.Dial("", "", syslog.LOG_LOCAL0|syslog.LOG_WARNING, "auditd")
 	}
-	my_log.Write([]byte(data))
+	if data != "" {
+		sysLog.Write([]byte(data))
+	}
 }

@@ -15,7 +15,7 @@ var uidMap = map[string]user.User{}
 //This does the heavy lifting of making auditd messages into json.
 //It is NOT thread (goroutine) safe, as it uses two shared global maps
 //It can be made threadsafe by locking these if performance becomes an issue.
-func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring string, c chan<- string) {
+func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring string) string {
 	data := strings.Fields(dstring)
 	_, seq := parseAuditHeader(data[0])
 	if _, ok := evBuf[seq]; ok == false {
@@ -61,11 +61,12 @@ func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring strin
 	case (dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319):
 		//fmt.Println(evBuf[seq])
 	default:
-		c <- mapToJsonString(evBuf[seq])
+		return mapToJsonString(evBuf[seq])
 		delete(evBuf, seq)
 		//End of the event - send to channel to process
 		//This is a brutal hack and we need to detect the EOE properly
 	}
+	return ""
 
 }
 
