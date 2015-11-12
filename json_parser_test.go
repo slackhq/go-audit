@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -33,7 +32,6 @@ func Test_makeJsonString_EOE(t *testing.T) {
 	m := newEventMap()
 	makeJsonString(m, 1320, "audit(1446832550.594:1234): blah=blah")
 
-	fmt.Println(m)
 	if _, ok := m[1234]; ok {
 		t.Error()
 	}
