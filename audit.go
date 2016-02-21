@@ -65,6 +65,7 @@ func profile() {
 }
 
 func loadConfig() {
+	go canaryRead()
 	viper.SetConfigName("go-audit")
 	viper.AddConfigPath("/etc/audit")
 	viper.AddConfigPath(".")
