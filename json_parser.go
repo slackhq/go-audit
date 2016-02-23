@@ -18,6 +18,12 @@ var uidMap = map[string]user.User{}
 func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring string) string {
 	data := strings.Fields(dstring)
 	_, seq := parseAuditHeader(data[0])
+	//this shortcuts sending events that don't have an id.
+	//since we recapture the socket every 5s, this eliminates a lot of useless info
+	if seq == 0 {
+		delete(evBuf, seq)
+		return ""
+	}
 	if _, ok := evBuf[seq]; ok == false {
 		evBuf[seq] = make(map[string]string)
 	}

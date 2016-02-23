@@ -11,6 +11,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -47,6 +48,13 @@ func startFlow(conn *NetlinkConnection) {
 	err = conn.Send(&ret)
 	if err != nil {
 		fmt.Println("something broke")
+	}
+}
+
+func keepFlow(conn *NetlinkConnection) {
+	for {
+		startFlow(conn)
+		time.Sleep(time.Second * 5)
 	}
 }
 
@@ -99,7 +107,8 @@ func main() {
 	eventBuffer := make(map[int]map[string]string)
 
 	conn := connect()
-	startFlow(conn)
+	//startFlow(conn)
+	go keepFlow(conn)
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
