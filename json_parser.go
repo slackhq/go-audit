@@ -64,7 +64,8 @@ func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring strin
 	}
 	switch {
 	//If the message is anything from 13xx(audit) but not 1320, lets combine them so don't output yet
-	case (dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319):
+	//Also ignore 1305 because it is just a config change and has no end
+	case ((dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319)) && (dtype != 1305):
 		//fmt.Println(evBuf[seq])
 	default:
 		jstring := mapToJsonString(evBuf[seq])
