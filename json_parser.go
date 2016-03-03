@@ -47,8 +47,7 @@ func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring strin
 			evBuf[seq][splitz[0]] = splitz[1]
 			switch splitz[0] {
 			//Get arg count and generate complete "command" element.
-			case "argc":
-				defer parseArgs(evBuf[seq])
+
 			//Add contextual info per host if we can look up the uid
 			case "uid":
 				parseUid(evBuf[seq], "uid")
@@ -68,6 +67,7 @@ func makeJsonString(evBuf map[int]map[string]string, dtype uint16, dstring strin
 	case ((dtype >= 1300 && dtype <= 1319) || (dtype >= 1300 && dtype <= 1319)) && (dtype != 1305):
 		//fmt.Println(evBuf[seq])
 	default:
+		parseArgs(evBuf[seq])
 		jstring := mapToJsonString(evBuf[seq])
 		delete(evBuf, seq)
 		return jstring
