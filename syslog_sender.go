@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/syslog"
 )
 
@@ -11,6 +12,9 @@ func logLine(data string) {
 		sysLog, _ = syslog.Dial("", "", syslog.LOG_LOCAL0|syslog.LOG_WARNING, "auditd")
 	}
 	if data != "" {
-		sysLog.Write([]byte(data))
+		_, err := sysLog.Write([]byte(data))
+		if err != nil {
+			fmt.Printf("Failed to log item of length %d because of error %s\n", len(data), err)
+		}
 	}
 }
