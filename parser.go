@@ -38,7 +38,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		Seq:           am.Seq,
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
-		UidMap:        make(map[string]string),
+		UidMap:        make(map[string]string, 5), // 5 is common for execve
 	}
 
 	amg.AddMessage(am)
@@ -49,7 +49,7 @@ func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
 	aTime, seq := parseAuditHeader(nlm)
 	return &AuditMessage{
 		Type: nlm.Header.Type,
-		Data: strings.Trim(string(nlm.Data), " "),
+		Data: string(nlm.Data),
 		Seq: seq,
 		AuditTime: aTime,
 	}

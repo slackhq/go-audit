@@ -4,11 +4,11 @@ package main
 //AKA multiline msg is coming in and next seq breaks the combo
 
 import (
-	"fmt"
 	"encoding/json"
 	"log"
 	"time"
 	"syscall"
+	"fmt"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 )
 
 type AuditLogger interface {
-	Print(... interface{})
+	Write([]byte) (int, error)
 }
 
 type AuditMarshaller struct {
@@ -30,41 +30,35 @@ type AuditMarshaller struct {
 func NewAuditMarshaller(al AuditLogger) (*AuditMarshaller){
 	return &AuditMarshaller{
 		al: al,
-		msgs: make(map[int]*AuditMessageGroup),
+		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 messages at any given time
 	}
 }
 
-func (a *AuditMarshaller) Consume(msg *syscall.NetlinkMessage) {
+func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 	//TODO: currently message completion requires the canary, make the client shoot noop messages occasionally to flush this
-	aMsg := NewAuditMessage(msg)
-
-	fmt.Printf("%+v %s\n", msg.Header, string(msg.Data))
-	a.flushOld()
+	aMsg := NewAuditMessage(nlMsg)
 
 	// We got an invalid audit message, return the current message and reset
 	if aMsg.Seq == 0 {
+		a.flushOld()
 		return
 	}
 
 	// Detect if we lost any messages
 	if aMsg.Seq > a.lastSeq + 1 {
-		fmt.Println("#################################################################################################")
-		fmt.Println("#################################################################################################")
-		fmt.Println("#################################################################################################")
-		fmt.Println("Last seen", a.lastSeq, "Current", aMsg.Seq)
-		fmt.Println("#################################################################################################")
-		fmt.Println("#################################################################################################")
-		fmt.Println("#################################################################################################")
+		fmt.Println("Likely missed a packet, last seen:", a.lastSeq, "; current:", aMsg.Seq)
 	}
 
+	// Keep track of the largest sequence
 	if aMsg.Seq > a.lastSeq {
 		a.lastSeq = aMsg.Seq
 	}
 
-	if (msg.Header.Type < EVENT_START || msg.Header.Type > EVENT_END) {
+	if (nlMsg.Header.Type < EVENT_START || nlMsg.Header.Type > EVENT_END) {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
+		a.flushOld()
 		return
-	} else if msg.Header.Type == EVENT_EOE {
+	} else if nlMsg.Header.Type == EVENT_EOE {
 		// This is end of event msg, flush the msg with that sequence and discard this one
 		a.completeMessage(aMsg.Seq)
 		return
@@ -77,6 +71,8 @@ func (a *AuditMarshaller) Consume(msg *syscall.NetlinkMessage) {
 		// Create a new AuditMessageGroup
 		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
 	}
+
+	a.flushOld()
 }
 
 func (a *AuditMarshaller) flushOld() {
@@ -105,5 +101,5 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	// Remove the message
 	delete(a.msgs, seq)
 
-	a.al.Print(string(s))
+	a.al.Write(s)
 }

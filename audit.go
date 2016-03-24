@@ -5,28 +5,12 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"os/exec"
-	"runtime/pprof"
 	"strings"
-
+	//"github.com/pkg/profile"
 	"github.com/spf13/viper"
+	"log/syslog"
 )
-
-//Helper for profiling. Don't forget to "pprof.StopCPUProfile()" at some point or the file isn't written.
-func profile() {
-	f, err := os.Create("/tmp/profile")
-	if err != nil {
-		log.Fatal(err)
-	}
-	f2, err := os.Create("/tmp/profile2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	pprof.StartCPUProfile(f)
-	pprof.WriteHeapProfile(f2)
-}
 
 func loadConfig() {
 	go canaryRead()
@@ -59,11 +43,9 @@ func main() {
 	loadConfig()
 
 	//TODO: auditLogger should be configurable
-	auditLogger := log.New(os.Stdout, "", 0)
+	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0|syslog.LOG_WARNING, "auditd")
 	nlClient := NewNetlinkClient()
-	marshaller := NewAuditMarshaller(auditLogger)
-
-	auditLogger.Print("Starting up")
+	marshaller := NewAuditMarshaller(syslogWriter)
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {

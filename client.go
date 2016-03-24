@@ -39,6 +39,7 @@ type NetlinkClient struct {
 	fd             int
 	address        syscall.SockaddrNetlink
 	seq            uint32
+	buf            []byte
 }
 
 func NewNetlinkClient() (*NetlinkClient) {
@@ -50,6 +51,7 @@ func NewNetlinkClient() (*NetlinkClient) {
 	n := &NetlinkClient{
 		fd: fd,
 		address: syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: 0, Pid: 0},
+		buf:     make([]byte, MAX_AUDIT_MESSAGE_LENGTH),
 	}
 
 	if err = syscall.Bind(fd, &n.address); err != nil {
@@ -70,8 +72,7 @@ func (n *NetlinkClient) Send(packet *[]byte) error {
 }
 
 func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
-	var raw = make([]byte, MAX_AUDIT_MESSAGE_LENGTH)
-	nlen, _, err := syscall.Recvfrom(n.fd, raw, 0)
+	nlen, _, err := syscall.Recvfrom(n.fd, n.buf, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +81,15 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 		return nil, errors.New("Got a 0 length packet")
 	}
 
-	buf := bytes.NewReader(raw[:nlen])
+	buf := bytes.NewReader(n.buf[:nlen])
 
 	msg := syscall.NetlinkMessage{
-		Data: raw[syscall.SizeofNlMsghdr:nlen],
+		Data: n.buf[syscall.SizeofNlMsghdr:nlen],
 	}
 
 	//TODO: handle internal messages, maybe use a channel as well
 	binary.Read(buf, Endianness, &msg.Header)
+
 	return &msg, nil
 }
 
