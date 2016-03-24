@@ -10,53 +10,9 @@ import (
 	"os/exec"
 	"runtime/pprof"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/spf13/viper"
 )
-
-var count int
-
-func ping(count *int, interval int) bool {
-	*count++
-	return (*count % interval) == 0
-}
-
-func connect() (conn *NetlinkConnection) {
-	conn, err := newNetlinkConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
-
-}
-
-func startFlow(conn *NetlinkConnection) {
-	//this mask starts the flow
-	var ret []byte
-	a, err := newAuditStatusPayload()
-	a.Mask = 4
-	a.Enabled = 1
-	a.Pid = uint32(syscall.Getpid())
-
-	n := newNetlinkPacket(1001)
-
-	ret, _ = AuditRequestSerialize(n, a)
-	//PrettyPacketSplit(ret, []int{32, 48, 64, 96, 128, 160, 192, 224, 256, 288})
-
-	err = conn.Send(&ret)
-	if err != nil {
-		fmt.Println("something broke")
-	}
-}
-
-func keepFlow(conn *NetlinkConnection) {
-	for {
-		startFlow(conn)
-		time.Sleep(time.Second * 5)
-	}
-}
 
 //Helper for profiling. Don't forget to "pprof.StopCPUProfile()" at some point or the file isn't written.
 func profile() {
@@ -100,24 +56,23 @@ func loadConfig() {
 }
 
 func main() {
-
 	loadConfig()
 
-	//This buffer holds partial events because they come as associated but separate lines from the kernel
-	eventBuffer := make(map[int]map[string]string)
+	//TODO: auditLogger should be configurable
+	auditLogger := log.New(os.Stdout, "", 0)
+	nlClient := NewNetlinkClient()
+	marshaller := NewAuditMarshaller(auditLogger)
 
-	conn := connect()
-	//startFlow(conn)
-	go keepFlow(conn)
+	auditLogger.Print("Starting up")
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
-		data, _ := conn.Receive()
-		header := readNetlinkPacketHeader(data[:16])
-		dstring := fmt.Sprintf("%s", data[16:])
-		jstring := makeJsonString(eventBuffer, header.Type, dstring)
-		if jstring != "" {
-			logLine(jstring)
+		msg, err := nlClient.Receive()
+		if err != nil {
+			fmt.Println("Error during message receive:", err)
+			continue
 		}
+
+		marshaller.Consume(msg)
 	}
 }
