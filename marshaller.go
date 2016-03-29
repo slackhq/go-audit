@@ -45,8 +45,8 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 	}
 
 	// Detect if we lost any messages
-	if aMsg.Seq > a.lastSeq + 1 {
-		fmt.Println("Likely missed a packet, last seen:", a.lastSeq, "; current:", aMsg.Seq)
+	if aMsg.Seq > a.lastSeq + 1 && a.lastSeq != 0 {
+		fmt.Printf("Likely missed a packet, last seen: %s; current %s;\n", a.lastSeq, aMsg.Seq)
 	}
 
 	// Keep track of the largest sequence
