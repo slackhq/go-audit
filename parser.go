@@ -94,12 +94,15 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 		}
 
 		start += 4
-		if end = strings.Index(data[start:], " "); end < 0 {
+		if end = strings.IndexByte(data[start:], " "[0]); end < 0 {
 			break
 		}
 
 		uid := data[start:start + end]
-		amg.UidMap[uid] = findUid(data[start:start + end])
+		// Don't bother re-adding if the existing group already has the mapping
+		if _, ok := amg.UidMap[uid]; !ok {
+			amg.UidMap[uid] = findUid(data[start:start + end])
+		}
 
 		next := start + end + 1
 		if (next >= len(data)) {
@@ -122,7 +125,6 @@ func findUid(uid string) (string) {
 		if err == nil {
 			uname = lUser.Username
 			uidMap[uid] = *lUser
-			//TODO: Probably redundant. FIX
 		} else {
 			uidMap[uid] = user.User{Username: uname}
 		}
