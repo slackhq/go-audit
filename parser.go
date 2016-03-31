@@ -80,7 +80,13 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 
 func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
-	amg.mapUids(am)
+	//TODO: need to find more message types that won't contain uids, also make these constants
+	switch am.Type {
+	case 1309, 1307:
+		// Don't map uids here
+	default:
+		amg.mapUids(am)
+	}
 }
 
 //This takes the map to modify and a key name and adds the username to a new key with "_username"
