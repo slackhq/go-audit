@@ -34,11 +34,13 @@ type AuditMessageGroup struct {
 }
 
 func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
+	//TODO: allocating 6 msgs per group is lame and we _should_ know ahead of time roughly how many we need
 	amg := &AuditMessageGroup{
 		Seq:           am.Seq,
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
-		UidMap:        make(map[string]string, 5), // 5 is common for execve
+		Msgs:          make([]*AuditMessage, 6), // 6 msgs per execve is common
+		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
 	}
 
 	amg.AddMessage(am)
