@@ -71,7 +71,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 		seq, _ = strconv.Atoi(header[sep + 1:])
 
 		// Remove the header from data
-		msg.Data = msg.Data[headerStop+2:]
+		msg.Data = msg.Data[headerStop + 3:]
 	}
 
 	return time, seq
