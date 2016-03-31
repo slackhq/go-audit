@@ -81,16 +81,18 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 		return nil, errors.New("Got a 0 length packet")
 	}
 
-	buf := bytes.NewReader(n.buf[:nlen])
-
-	msg := syscall.NetlinkMessage{
+	msg := &syscall.NetlinkMessage{
+		Header: syscall.NlMsghdr{
+			Len: Endianness.Uint32(n.buf[0:4]),
+			Type: Endianness.Uint16(n.buf[4:6]),
+			Flags: Endianness.Uint16(n.buf[6:8]),
+			Seq: Endianness.Uint32(n.buf[8:12]),
+			Pid: Endianness.Uint32(n.buf[12:16]),
+		},
 		Data: n.buf[syscall.SizeofNlMsghdr:nlen],
 	}
 
-	//TODO: handle internal messages, maybe use a channel as well
-	binary.Read(buf, Endianness, &msg.Header)
-
-	return &msg, nil
+	return msg, nil
 }
 
 func (n *NetlinkClient) KeepConnection() {
