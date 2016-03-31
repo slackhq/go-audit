@@ -39,7 +39,6 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		Seq:           am.Seq,
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
-		Msgs:          make([]*AuditMessage, 6), // 6 msgs per execve is common
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
 	}
 
