@@ -9,7 +9,7 @@ import (
 
 var cnt int
 
-func BenchmarkAudit(b *testing.B) {
+func BenchmarkAuditBig(b *testing.B) {
 	marshaller := NewAuditMarshaller(&thing{})
 
 	data := make([][]byte, 6)
@@ -36,7 +36,45 @@ func BenchmarkAudit(b *testing.B) {
 
 	
 	for i := 0; i < b.N; i++ {
-		for n := 0; n < 6; n++ {
+		for n := 0; n < len(data); n++ {
+			nlen := len(data[n])
+			//buf := bytes.NewReader(data[n][:nlen])
+			//
+			//msg := &syscall.NetlinkMessage{
+			//	Data: data[n][syscall.SizeofNlMsghdr:nlen],
+			//}
+			//
+			////TODO: handle internal messages, maybe use a channel as well
+			//binary.Read(buf, Endianness, &msg.Header)
+			msg := &syscall.NetlinkMessage{
+				Header: syscall.NlMsghdr{
+					Len: Endianness.Uint32(data[n][0:4]),
+					Type: Endianness.Uint16(data[n][4:6]),
+					Flags: Endianness.Uint16(data[n][6:8]),
+					Seq: Endianness.Uint32(data[n][8:12]),
+					Pid: Endianness.Uint32(data[n][12:16]),
+				},
+				Data: data[n][syscall.SizeofNlMsghdr:nlen],
+			}
+
+			//b.Logf("%+v", msg)
+			marshaller.Consume(msg)
+		}
+	}
+
+	fmt.Println("Got", cnt)
+	//18.48% - 3.75s
+}
+
+func BenchmarkAuditSmall(b *testing.B) {
+	marshaller := NewAuditMarshaller(&thing{})
+
+	data := make([][]byte, 1)
+	//&{1302,,item=0,name="/bin/ls",inode=262316,dev=ca:01,mode=0100755,ouid=0,ogid=0,rdev=00:00,nametype=NORMAL,1222763,1459376866.885}
+	data[0] = []byte{129,0,0,0,22,5,0,0,0,0,0,0,0,0,0,0,97,117,100,105,116,40,49,52,53,57,51,55,54,56,54,54,46,56,56,53,58,49,50,50,50,55,54,51,41,58,32,105,116,101,109,61,48,32,110,97,109,101,61,34,47,98,105,110,47,108,115,34,32,105,110,111,100,101,61,50,54,50,51,49,54,32,100,101,118,61,99,97,58,48,49,32,109,111,100,101,61,48,49,48,48,55,53,53,32,111,117,105,100,61,48,32,111,103,105,100,61,48,32,114,100,101,118,61,48,48,58,48,48,32,110,97,109,101,116,121,112,101,61,78,79,82,77,65,76}
+
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < 1; n++ {
 			nlen := len(data[n])
 			//buf := bytes.NewReader(data[n][:nlen])
 			//
