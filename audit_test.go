@@ -63,7 +63,6 @@ func BenchmarkAuditBig(b *testing.B) {
 	}
 
 	fmt.Println("Got", cnt)
-	//18.48% - 3.75s
 }
 
 func BenchmarkAuditSmall(b *testing.B) {
@@ -140,6 +139,7 @@ func BenchmarkAuditSmall(b *testing.B) {
 //}
 
 type thing struct { t *testing.T }
+
 func (t *thing) Write(a []byte) (int, error) {
 	//fmt.Println(string(a))
 	cnt++

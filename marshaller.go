@@ -1,14 +1,14 @@
 package main
 
-//TODO: need a repro case for combo breaking packets
 //AKA multiline msg is coming in and next seq breaks the combo
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 	"syscall"
 	"fmt"
+	"log"
+	"io"
 )
 
 const (
@@ -17,21 +17,16 @@ const (
 	EVENT_EOE = 1320 // End of multi packet event
 )
 
-type AuditLogger interface {
-	Write([]byte) (int, error)
-}
-
 type AuditMarshaller struct {
 	msgs map[int]*AuditMessageGroup
-	al AuditLogger
+	encoder *json.Encoder
 	lastSeq int
-	buf []byte
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(al AuditLogger) (*AuditMarshaller){
+func NewAuditMarshaller(w io.Writer) (*AuditMarshaller){
 	return &AuditMarshaller{
-		al: al,
+		encoder: json.NewEncoder(w),
 		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 messagee groups at any given time
 	}
 }
@@ -93,20 +88,15 @@ func (a *AuditMarshaller) flushOld() {
 func (a *AuditMarshaller) completeMessage(seq int) {
 	var msg *AuditMessageGroup
 	var ok bool
-	var err error
 
 	if msg, ok = a.msgs[seq]; !ok {
 		//TODO: attempted to complete a missing message, log?
 		return
 	}
 
-	a.buf, err = json.Marshal(msg)
-	if err != nil {
+	if err := a.encoder.Encode(msg); err != nil {
 		log.Fatal(err)
 	}
 
-	// Remove the message
 	delete(a.msgs, seq)
-
-	a.al.Write(a.buf)
 }
