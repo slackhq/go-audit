@@ -33,6 +33,7 @@ type AuditMessageGroup struct {
 	UidMap        map[string]string `json:"uid_map"`
 }
 
+// Creates a new message group from the details parsed from the message
 func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 	//TODO: allocating 6 msgs per group is lame and we _should_ know ahead of time roughly how many we need
 	amg := &AuditMessageGroup{
@@ -46,6 +47,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 	return amg
 }
 
+// Creates a new go-audit message from a netlink message
 func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
 	aTime, seq := parseAuditHeader(nlm)
 	return &AuditMessage{
@@ -56,6 +58,7 @@ func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
 	}
 }
 
+// Gets the timestamp and audit sequence id from a netlink message
 func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 	headerStop := bytes.Index(msg.Data, headerEndChar)
 	// If the position the header appears to stop is less than the minimum length of a header, bail out
@@ -77,6 +80,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 	return time, seq
 }
 
+// Add a new message to the current message group
 func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
@@ -88,7 +92,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	}
 }
 
-//This takes the map to modify and a key name and adds the username to a new key with "_username"
+// Find all `uid=` occurences in a message and adds the username to the UidMap object
 func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 	data := am.Data
 	start := 0
@@ -107,7 +111,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 		uid := data[start:start + end]
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.UidMap[uid]; !ok {
-			amg.UidMap[uid] = findUid(data[start:start + end])
+			amg.UidMap[uid] = getUsername(data[start:start + end])
 		}
 
 		next := start + end + 1
@@ -119,7 +123,8 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 
 }
 
-func findUid(uid string) (string) {
+// Gets a username for a user id
+func getUsername(uid string) (string) {
 	uname := "UNKNOWN_USER"
 
 	//Make sure we have a uid element to work with.

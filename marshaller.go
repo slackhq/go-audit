@@ -25,32 +25,35 @@ type AuditMarshaller struct {
 	msgs map[int]*AuditMessageGroup
 	al AuditLogger
 	lastSeq int
+	buf []byte
 }
 
+// Create a new marshaller
 func NewAuditMarshaller(al AuditLogger) (*AuditMarshaller){
 	return &AuditMarshaller{
 		al: al,
-		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 messages at any given time
+		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 messagee groups at any given time
 	}
 }
 
+// Ingests a netlink message and likely prepares it to be logged
 func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 	//TODO: currently message completion requires the canary, make the client shoot noop messages occasionally to flush this
 	aMsg := NewAuditMessage(nlMsg)
 
-	// We got an invalid audit message, return the current message and reset
 	if aMsg.Seq == 0 {
+		// We got an invalid audit message, return the current message and reset
 		a.flushOld()
 		return
 	}
 
-	// Detect if we lost any messages
 	if aMsg.Seq > a.lastSeq + 1 && a.lastSeq != 0 {
+		// Detect if we lost any messages
 		fmt.Printf("Likely missed a packet, last seen: %s; current %s;\n", a.lastSeq, aMsg.Seq)
 	}
 
-	// Keep track of the largest sequence
 	if aMsg.Seq > a.lastSeq {
+		// Keep track of the largest sequence
 		a.lastSeq = aMsg.Seq
 	}
 
@@ -75,6 +78,8 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 	a.flushOld()
 }
 
+// Outputs any messages that are old enough
+// This is because there is no indication of multi message events coming from kaudit
 func (a *AuditMarshaller) flushOld() {
 	now := time.Now()
 	for seq, msg := range a.msgs {
@@ -84,16 +89,18 @@ func (a *AuditMarshaller) flushOld() {
 	}
 }
 
+// Write a complete message group to the configured output in json format
 func (a *AuditMarshaller) completeMessage(seq int) {
 	var msg *AuditMessageGroup
 	var ok bool
+	var err error
 
 	if msg, ok = a.msgs[seq]; !ok {
 		//TODO: attempted to complete a missing message, log?
 		return
 	}
 
-	s, err := json.Marshal(msg)
+	a.buf, err = json.Marshal(msg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,5 +108,5 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	// Remove the message
 	delete(a.msgs, seq)
 
-	a.al.Write(s)
+	a.al.Write(a.buf)
 }

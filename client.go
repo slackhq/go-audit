@@ -14,7 +14,7 @@ import (
 var Endianness = binary.LittleEndian
 
 const (
-	//TODO: http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L402
+	//http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L398
 	MAX_AUDIT_MESSAGE_LENGTH = 8970
 )
 
