@@ -14,8 +14,6 @@ import (
 )
 
 func loadConfig(configLocation string) {
-	go canaryRead()
-
 	if configLocation == "" {
 		viper.SetConfigName("go-audit")
 		viper.AddConfigPath("/etc/audit")
@@ -31,22 +29,6 @@ func loadConfig(configLocation string) {
 	}
 
 	fmt.Println("Using config from", viper.ConfigFileUsed())
-
-	if viper.GetBool("canary") {
-		go canaryGo(viper.GetString("canary_host"), viper.GetString("canary_port"))
-	}
-	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
-		for _, v := range rules {
-			var _ = v
-			v := strings.Fields(v)
-			err := exec.Command("auditctl", v...).Run()
-			if err != nil {
-				fmt.Println("auditctl exit info: ", err)
-			}
-		}
-	} else {
-		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
-	}
 }
 
 func main() {
@@ -57,18 +39,34 @@ func main() {
 
 	loadConfig(*configFile)
 
+	if viper.GetBool("canary") {
+		go canaryRead()
+	}
+
+	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
+		for _, v := range rules {
+			err := exec.Command("auditctl", strings.Fields(v)...).Run()
+			if err != nil {
+				//TODO: this should probably be a fatal
+				fmt.Println("auditctl exit info: ", err)
+			}
+		}
+	} else {
+		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
+	}
+
 	if *cpuProfile {
 		fmt.Println("Enabling CPU profile ./cpu.pprof")
 		defer profile.Start(profile.Quiet, profile.ProfilePath(".")).Stop()
 	}
 
 	//TODO: syslogWriter should be configurable
-	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "auditd")
+	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "go-audit")
 	nlClient := NewNetlinkClient()
 	marshaller := NewAuditMarshaller(syslogWriter)
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
-	for x := 0; x < 40001; x++ {
+	for {
 		msg, err := nlClient.Receive()
 		if err != nil {
 			fmt.Println("Error during message receive:", err)

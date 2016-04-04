@@ -1,7 +1,5 @@
 package main
 
-//AKA multiline msg is coming in and next seq breaks the combo
-
 import (
 	"encoding/json"
 	"time"
