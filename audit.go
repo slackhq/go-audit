@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"log/syslog"
 	"flag"
+	"os"
 )
 
 func loadConfig(configLocation string) {
@@ -43,13 +44,25 @@ func main() {
 		go canaryRead()
 	}
 
+	// Clear existing rules
+	err := exec.Command("auditctl", "-D").Run()
+	if err != nil {
+		fmt.Printf("Failed to flush existing audit rules. Error: %s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Flushed existing rules")
+
+	// Add ours in
 	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
-		for _, v := range rules {
+		for i, v := range rules {
 			err := exec.Command("auditctl", strings.Fields(v)...).Run()
 			if err != nil {
-				//TODO: this should probably be a fatal
-				fmt.Println("auditctl exit info: ", err)
+				fmt.Printf("Failed to add rule #%d. Error: %s\n", i + 1, err)
+				os.Exit(1)
 			}
+
+			fmt.Printf("Added rule #%d\n", i + 1)
 		}
 	} else {
 		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
@@ -64,6 +77,8 @@ func main() {
 	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "go-audit")
 	nlClient := NewNetlinkClient()
 	marshaller := NewAuditMarshaller(syslogWriter)
+
+	fmt.Println("Starting")
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
