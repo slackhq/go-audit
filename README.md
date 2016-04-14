@@ -31,11 +31,58 @@ I became interested in creating a replacement for the existing daemon.
 ##### Example Config 
 
 ```
+# Reads /proc/net/netlink every 5 seconds
+# you should set a file watch rule to pick the file access `-w /proc/net/netlink -p war -k netlink-file`
 canary: true
 
+# Configure socket buffers, leave unset to use the system defaults
+# Values will be doubled by the kernel 
+socket_buffer:
+    # Default is net.core.rmem_default (/proc/sys/net/core/rmem_default)
+    # Maximum max is net.core.rmem_max (/proc/sys/net/core/rmem_max)
+    receive: 16384
+
+# Configure message sequence tracking
+message_tracking:
+  # Track messages and identify if we missed any, default true
+  enabled: true
+
+  # Log out of orderness, these messages typically signify an overloading system, default false
+  log_out_of_order: false
+
 rules:
+  # Watch all 64 bit program executions
   - -a exit,always -F arch=b64 -S execve
+  # Watch all 32 bit program executions
   - -a exit,always -F arch=b32 -S execve
+```
+
+
+## FAQ
+
+#### I am seeing `Error during message receive: no buffer space available` in the logs
+
+This is because `go-audit` is not receiving data as quickly as your system is generating it. You can increase
+the receive buffer system wide and maybe it will help. Best to try and reduce the amount of data `go-audit` has
+to handle.
+
+If reducing audit velocity is not an option you can try increasing `socket_buffer.receive` in your config.
+See [Example Config](#example-config) for more information
+
+```
+socket_buffer:
+    receive: <some number bigger than (the current value * 2)>
+```
+
+#### Sometime files don't have a `name`, only `inode`, what gives?
+
+The kernel doesn't always know the filename for file access. Figuring out the filename from an inode is expensive and
+error prone.
+
+You can map back to a filename, possibly not *the* filename, that triggured the audit line though.
+
+```
+sudo debugfs -R "ncheck <inode to map>" /dev/<your block device here>
 ```
 
 ## Thanks!
