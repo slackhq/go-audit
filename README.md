@@ -61,6 +61,9 @@ rules:
   - -a exit,always -F arch=b32 -S execve
 ```
 
+##### Running as a service
+ 
+Check the `contrib` folder, it contains examples for how to run `go-audit` as a proper service on your machine.
 
 ## FAQ
 
