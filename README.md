@@ -37,6 +37,7 @@ canary: true
 
 # Configure socket buffers, leave unset to use the system defaults
 # Values will be doubled by the kernel 
+# It is recommended you do not set any of these values unless you really need to
 socket_buffer:
     # Default is net.core.rmem_default (/proc/sys/net/core/rmem_default)
     # Maximum max is net.core.rmem_max (/proc/sys/net/core/rmem_max)
@@ -49,6 +50,9 @@ message_tracking:
 
   # Log out of orderness, these messages typically signify an overloading system, default false
   log_out_of_order: false
+  
+  # Maximum out of orderness before a missed sequence is presumed dropped, default 500
+  max_out_of_order: 500
 
 rules:
   # Watch all 64 bit program executions

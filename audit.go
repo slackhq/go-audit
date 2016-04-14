@@ -15,6 +15,11 @@ import (
 )
 
 func loadConfig(configLocation string) {
+	viper.SetDefault("canary", true)
+	viper.SetDefault("message_tracking.enabled", true)
+	viper.SetDefault("message_tracking.log_out_of_order", false)
+	viper.SetDefault("message_tracking.max_out_of_order", 500)
+
 	if configLocation == "" {
 		viper.SetConfigName("go-audit")
 		viper.AddConfigPath("/etc/audit")
@@ -32,6 +37,38 @@ func loadConfig(configLocation string) {
 	fmt.Println("Using config from", viper.ConfigFileUsed())
 }
 
+func setRules() {
+	// Clear existing rules
+	err := exec.Command("auditctl", "-D").Run()
+	if err != nil {
+		fmt.Printf("Failed to flush existing audit rules. Error: %s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Flushed existing audit rules")
+
+	// Add ours in
+	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
+		for i, v := range rules {
+			// Skip rules with no content
+			if v == "" {
+				continue
+			}
+
+			err := exec.Command("auditctl", strings.Fields(v)...).Run()
+			if err != nil {
+				fmt.Printf("Failed to add rule #%d. Error: %s \n", i + 1, err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("Added audit rule #%d\n", i + 1)
+		}
+	} else {
+		fmt.Println("No audit rules found. exiting")
+		os.Exit(1)
+	}
+}
+
 func main() {
 	configFile := flag.String("config", "", "Config file location, default /etc/audit/go-audit.yaml")
 	cpuProfile := flag.Bool("cpuprofile", false, "Enable cpu profiling")
@@ -44,29 +81,7 @@ func main() {
 		go canaryRead()
 	}
 
-	// Clear existing rules
-	err := exec.Command("auditctl", "-D").Run()
-	if err != nil {
-		fmt.Printf("Failed to flush existing audit rules. Error: %s\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Flushed existing rules")
-
-	// Add ours in
-	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
-		for i, v := range rules {
-			err := exec.Command("auditctl", strings.Fields(v)...).Run()
-			if err != nil {
-				fmt.Printf("Failed to add rule #%d. Error: %s\n", i + 1, err)
-				os.Exit(1)
-			}
-
-			fmt.Printf("Added rule #%d\n", i + 1)
-		}
-	} else {
-		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
-	}
+	setRules()
 
 	if *cpuProfile {
 		fmt.Println("Enabling CPU profile ./cpu.pprof")
@@ -75,16 +90,25 @@ func main() {
 
 	//TODO: syslogWriter should be configurable
 	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "go-audit")
-	nlClient := NewNetlinkClient()
-	marshaller := NewAuditMarshaller(syslogWriter)
+	nlClient := NewNetlinkClient(viper.GetInt("socket_buffer.receive"))
+	marshaller := NewAuditMarshaller(
+		syslogWriter,
+		viper.GetBool("message_tracking.enabled"),
+		viper.GetBool("message_tracking.log_out_of_order"),
+		viper.GetInt("message_tracking.max_out_of_order"),
+	)
 
-	fmt.Println("Starting")
+	fmt.Println("Starting to process events")
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
 		msg, err := nlClient.Receive()
 		if err != nil {
-			fmt.Println("Error during message receive:", err)
+			fmt.Printf("Error during message receive: %+v\n", err)
+			continue
+		}
+
+		if msg == nil {
 			continue
 		}
 
