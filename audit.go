@@ -5,119 +5,89 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"os/exec"
-	"runtime/pprof"
 	"strings"
-	"syscall"
-	"time"
-
+	"github.com/pkg/profile"
 	"github.com/spf13/viper"
+	"log/syslog"
+	"flag"
+	"os"
 )
 
-var count int
-
-func ping(count *int, interval int) bool {
-	*count++
-	return (*count % interval) == 0
-}
-
-func connect() (conn *NetlinkConnection) {
-	conn, err := newNetlinkConnection()
-	if err != nil {
-		log.Fatal(err)
+func loadConfig(configLocation string) {
+	if configLocation == "" {
+		viper.SetConfigName("go-audit")
+		viper.AddConfigPath("/etc/audit")
+		viper.AddConfigPath(".")
+	} else {
+		viper.SetConfigFile(configLocation)
 	}
-	return
 
-}
-
-func startFlow(conn *NetlinkConnection) {
-	//this mask starts the flow
-	var ret []byte
-	a, err := newAuditStatusPayload()
-	a.Mask = 4
-	a.Enabled = 1
-	a.Pid = uint32(syscall.Getpid())
-
-	n := newNetlinkPacket(1001)
-
-	ret, _ = AuditRequestSerialize(n, a)
-	//PrettyPacketSplit(ret, []int{32, 48, 64, 96, 128, 160, 192, 224, 256, 288})
-
-	err = conn.Send(&ret)
-	if err != nil {
-		fmt.Println("something broke")
-	}
-}
-
-func keepFlow(conn *NetlinkConnection) {
-	for {
-		startFlow(conn)
-		time.Sleep(time.Second * 5)
-	}
-}
-
-//Helper for profiling. Don't forget to "pprof.StopCPUProfile()" at some point or the file isn't written.
-func profile() {
-	f, err := os.Create("/tmp/profile")
-	if err != nil {
-		log.Fatal(err)
-	}
-	f2, err := os.Create("/tmp/profile2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	pprof.StartCPUProfile(f)
-	pprof.WriteHeapProfile(f2)
-}
-
-func loadConfig() {
-	go canaryRead()
-	viper.SetConfigName("go-audit")
-	viper.AddConfigPath("/etc/audit")
-	viper.AddConfigPath(".")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
 		fmt.Println("Config not found. Running in default mode. (forwarding all events to syslog)")
 		return
 	}
+
+	fmt.Println("Using config from", viper.ConfigFileUsed())
+}
+
+func main() {
+	configFile := flag.String("config", "", "Config file location, default /etc/audit/go-audit.yaml")
+	cpuProfile := flag.Bool("cpuprofile", false, "Enable cpu profiling")
+
+	flag.Parse()
+
+	loadConfig(*configFile)
+
 	if viper.GetBool("canary") {
-		go canaryGo(viper.GetString("canary_host"), viper.GetString("canary_port"))
+		go canaryRead()
 	}
+
+	// Clear existing rules
+	err := exec.Command("auditctl", "-D").Run()
+	if err != nil {
+		fmt.Printf("Failed to flush existing audit rules. Error: %s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Flushed existing rules")
+
+	// Add ours in
 	if rules := viper.GetStringSlice("rules"); len(rules) != 0 {
-		for _, v := range rules {
-			var _ = v
-			v := strings.Fields(v)
-			err := exec.Command("auditctl", v...).Run()
+		for i, v := range rules {
+			err := exec.Command("auditctl", strings.Fields(v)...).Run()
 			if err != nil {
-				fmt.Println("auditctl exit info: ", err)
+				fmt.Printf("Failed to add rule #%d. Error: %s\n", i + 1, err)
+				os.Exit(1)
 			}
+
+			fmt.Printf("Added rule #%d\n", i + 1)
 		}
 	} else {
 		fmt.Println("No rules found. Running with existing ruleset (may be empty!)")
 	}
-}
 
-func main() {
+	if *cpuProfile {
+		fmt.Println("Enabling CPU profile ./cpu.pprof")
+		defer profile.Start(profile.Quiet, profile.ProfilePath(".")).Stop()
+	}
 
-	loadConfig()
+	//TODO: syslogWriter should be configurable
+	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "go-audit")
+	nlClient := NewNetlinkClient()
+	marshaller := NewAuditMarshaller(syslogWriter)
 
-	//This buffer holds partial events because they come as associated but separate lines from the kernel
-	eventBuffer := make(map[int]map[string]string)
-
-	conn := connect()
-	//startFlow(conn)
-	go keepFlow(conn)
+	fmt.Println("Starting")
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
-		data, _ := conn.Receive()
-		header := readNetlinkPacketHeader(data[:16])
-		dstring := fmt.Sprintf("%s", data[16:])
-		jstring := makeJsonString(eventBuffer, header.Type, dstring)
-		if jstring != "" {
-			logLine(jstring)
+		msg, err := nlClient.Receive()
+		if err != nil {
+			fmt.Println("Error during message receive:", err)
+			continue
 		}
+
+		marshaller.Consume(msg)
 	}
 }
