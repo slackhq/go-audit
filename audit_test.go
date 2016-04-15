@@ -9,7 +9,6 @@ import (
 	"os"
 )
 
-// Make sure to set sane default values
 func Test_loadConfig_defaultValues(t *testing.T) {
 	config := viper.New()
 
@@ -25,6 +24,31 @@ func Test_loadConfig_defaultValues(t *testing.T) {
 	assert.Equal(t, config.GetInt("output.syslog.priority"), 132, "output.syslog.priority should default to 132")
 	assert.Equal(t, config.GetString("output.syslog.tag"), "go-audit", "output.syslog.tag should default to go-audit")
 	assert.Equal(t, config.GetInt("log.flags"), 0, "log.flags should default to 0")
+}
+
+func Test_loadConfig_fail(t *testing.T) {
+	//TODO: test that we exit if the config file doesn't exist or is poorly formed
+	t.Skip("Not implemented")
+}
+
+func Test_setRules(t *testing.T) {
+	//TODO: Test rules are flushed first (success/fail)
+	//TODO: Test rules are added (success/fail)
+	//TODO: Test empty rule lines are skipped
+	//TODO: Test fatal if no rules
+	t.Skip("Not implemented")
+}
+
+func Test_createOutput(t *testing.T) {
+	//TODO: Test all config settings are used
+	//TODO: Test failure to connect to syslog
+	//TODO: Test fatal if syslog is not enabled
+	t.Skip("Not implemented")
+}
+
+func Test_main(t *testing.T) {
+	//TODO: This one will be tricky in its current format
+	t.Skip("Not implemented")
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
