@@ -1,0 +1,49 @@
+# Reads /proc/net/netlink every 5 seconds
+# you should set a file watch rule to pick the file access `-w /proc/net/netlink -p war -k netlink-file`
+canary: true
+
+# Configure socket buffers, leave unset to use the system defaults
+# Values will be doubled by the kernel
+# It is recommended you do not set any of these values unless you really need to
+socket_buffer:
+  # Default is net.core.rmem_default (/proc/sys/net/core/rmem_default)
+  # Maximum max is net.core.rmem_max (/proc/sys/net/core/rmem_max)
+  receive: 16384
+
+# Configure message sequence tracking
+message_tracking:
+  # Track messages and identify if we missed any, default true
+  enabled: true
+
+  # Log out of orderness, these messages typically signify an overloading system, default false
+  log_out_of_order: false
+
+  # Maximum out of orderness before a missed sequence is presumed dropped, default 500
+  max_out_of_order: 500
+
+# Configure where to output logs to
+output:
+  syslog:
+    enabled: true
+
+    # Configure the type of socket this should be, default is unixgram
+    # This maps to `network` in golangs net.Dial: https://golang.org/pkg/net/#Dial
+    network: unixgram
+
+    # Set the remote address to connect to, this can be a path or an ip address
+    # This maps to `address` in golangs net.Dial: https://golang.org/pkg/net/#Dial
+    address: /dev/log
+
+    # Sets the facility and severity for all events. See the table below for help
+    # The default is 132 which maps to local0 | warn
+    priority: 129 # local0 | emerg
+
+    # Typically the name of the program generating the message. The PID is of the process is appended for you: [1233]
+    # Default value is "go-audit"
+    tag: "audit-thing"
+
+rules:
+  # Watch all 64 bit program executions
+  - -a exit,always -F arch=b64 -S execve
+  # Watch all 32 bit program executions
+  - -a exit,always -F arch=b32 -S execve

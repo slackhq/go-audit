@@ -20,7 +20,7 @@ func loadConfig(configLocation string) {
 	viper.SetDefault("message_tracking.enabled", true)
 	viper.SetDefault("message_tracking.log_out_of_order", false)
 	viper.SetDefault("message_tracking.max_out_of_order", 500)
-	viper.SetDefault("output.type", "syslog")
+	viper.SetDefault("output.syslog.enabled", true)
 	viper.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0 | syslog.LOG_WARNING))
 	viper.SetDefault("output.syslog.tag", "go-audit")
 
@@ -74,6 +74,11 @@ func setRules() {
 }
 
 func createOutput() io.Writer {
+	if viper.GetBool("output.syslog.enabled") == false {
+		fmt.Println("No outputs have been enabled")
+		os.Exit(1)
+	}
+
 	syslogWriter, err := syslog.Dial(
 		viper.GetString("output.syslog.network"),
 		viper.GetString("output.syslog.address"),
