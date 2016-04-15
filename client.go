@@ -2,11 +2,9 @@ package main
 
 import (
 	"syscall"
-	"log"
 	"sync/atomic"
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"time"
 	"errors"
 )
@@ -45,7 +43,7 @@ type NetlinkClient struct {
 func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
-		log.Fatal("Could not create a socket:", err)
+		el.Fatalln("Could not create a socket:", err)
 	}
 
 	n := &NetlinkClient{
@@ -56,7 +54,7 @@ func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 
 	if err = syscall.Bind(fd, &n.address); err != nil {
 		syscall.Close(fd)
-		log.Fatal("Could not bind to netlink socket:", err)
+		el.Fatalln("Could not bind to netlink socket:", err)
 	}
 
 	// Set the buffer size if we were asked
@@ -66,7 +64,7 @@ func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 
 	// Print the current receive buffer size
 	if v, err := syscall.GetsockoptInt(n.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF); err == nil {
-		fmt.Println("Socket receive buffer size:", v)
+		el.Println("Socket receive buffer size:", v)
 	}
 
 	go n.KeepConnection()
@@ -127,7 +125,7 @@ func (n *NetlinkClient) KeepConnection() {
 
 		err := n.Send(&ret)
 		if err != nil {
-			fmt.Println("Error occurred while trying to keep the connection:", err)
+			el.Println("Error occurred while trying to keep the connection:", err)
 		}
 
 		time.Sleep(time.Second * 5)

@@ -32,7 +32,7 @@ I became interested in creating a replacement for the existing daemon.
 
 If you want to run unit tests: `go test`
 
-If you want to run benchmark tests: `go test -bench -benchtime=5s -cpuprofile=cpu.pprof`
+If you want to run benchmark tests: `go test -bench=. -benchtime=5s -cpuprofile=cpu.pprof`
 
 To dig into the cpu profile of a benchmark test: `go tool pprof go-audit.test cpu.pprof`
 
