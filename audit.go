@@ -12,6 +12,7 @@ import (
 	"log/syslog"
 	"flag"
 	"os"
+	"io"
 )
 
 func loadConfig(configLocation string) {
@@ -19,6 +20,9 @@ func loadConfig(configLocation string) {
 	viper.SetDefault("message_tracking.enabled", true)
 	viper.SetDefault("message_tracking.log_out_of_order", false)
 	viper.SetDefault("message_tracking.max_out_of_order", 500)
+	viper.SetDefault("output.type", "syslog")
+	viper.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0 | syslog.LOG_WARNING))
+	viper.SetDefault("output.syslog.tag", "go-audit")
 
 	if configLocation == "" {
 		viper.SetConfigName("go-audit")
@@ -69,6 +73,22 @@ func setRules() {
 	}
 }
 
+func createOutput() io.Writer {
+	syslogWriter, err := syslog.Dial(
+		viper.GetString("output.syslog.network"),
+		viper.GetString("output.syslog.address"),
+		syslog.Priority(viper.GetInt("output.syslog.priority")),
+		viper.GetString("output.syslog.tag"),
+	)
+
+	if err != nil {
+		fmt.Println("Failed to open syslog writer. Error:", err)
+		os.Exit(1)
+	}
+
+	return syslogWriter
+}
+
 func main() {
 	configFile := flag.String("config", "", "Config file location, default /etc/audit/go-audit.yaml")
 	cpuProfile := flag.Bool("cpuprofile", false, "Enable cpu profiling")
@@ -88,11 +108,10 @@ func main() {
 		defer profile.Start(profile.Quiet, profile.ProfilePath(".")).Stop()
 	}
 
-	//TODO: syslogWriter should be configurable
-	syslogWriter, _ := syslog.Dial("", "", syslog.LOG_LOCAL0 | syslog.LOG_WARNING, "go-audit")
+	writer := createOutput()
 	nlClient := NewNetlinkClient(viper.GetInt("socket_buffer.receive"))
 	marshaller := NewAuditMarshaller(
-		syslogWriter,
+		writer,
 		viper.GetBool("message_tracking.enabled"),
 		viper.GetBool("message_tracking.log_out_of_order"),
 		viper.GetInt("message_tracking.max_out_of_order"),
