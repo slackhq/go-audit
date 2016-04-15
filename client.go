@@ -42,7 +42,7 @@ type NetlinkClient struct {
 	buf            []byte
 }
 
-func NewNetlinkClient() (*NetlinkClient) {
+func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
 		log.Fatal("Could not create a socket:", err)
@@ -57,6 +57,16 @@ func NewNetlinkClient() (*NetlinkClient) {
 	if err = syscall.Bind(fd, &n.address); err != nil {
 		syscall.Close(fd)
 		log.Fatal("Could not bind to netlink socket:", err)
+	}
+
+	// Set the buffer size if we were asked
+	if (recvSize > 0) {
+		err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, recvSize)
+	}
+
+	// Print the current receive buffer size
+	if v, err := syscall.GetsockoptInt(n.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF); err == nil {
+		fmt.Println("Socket receive buffer size:", v)
 	}
 
 	go n.KeepConnection()
