@@ -5,8 +5,8 @@ import (
 	"time"
 	"syscall"
 	"fmt"
-	"log"
 	"io"
+	"os"
 )
 
 const (
@@ -96,7 +96,9 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	}
 
 	if err := a.encoder.Encode(msg); err != nil {
-		log.Fatal(err)
+		fmt.Println("Failed to write message. Error:", err)
+		fmt.Println(msg)
+		os.Exit(1)
 	}
 
 	delete(a.msgs, seq)

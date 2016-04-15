@@ -103,12 +103,6 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 	}
 
 	return msg, nil
-
-	//t := []byte{}
-	//_ = errors.New("nope")
-	//nlen, oobn, flags, _, err := syscall.Recvmsg(n.fd, n.buf, t, 0)
-	//fmt.Printf("nlen %+v, oobn %+v, flags %+v, err %+v\n", nlen, oobn, flags, err)
-	//return nil, nil
 }
 
 func (n *NetlinkClient) KeepConnection() {
