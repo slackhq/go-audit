@@ -117,7 +117,7 @@ func main() {
 		viper.GetInt("message_tracking.max_out_of_order"),
 	)
 
-	fmt.Println("Starting to process events")
+	fmt.Println("Started processing events")
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
