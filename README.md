@@ -28,13 +28,21 @@ I became interested in creating a replacement for the existing daemon.
   ```
 3. Copy binary `go-audit` to wherever you'd like
 
-##### Example Config 
+##### Testing
 
-See [go-audit.yaml.example](go-audit.yaml.example)
+If you want to run unit tests: `go test`
+
+If you want to run benchmark tests: `go test -bench -benchtime=5s -cpuprofile=cpu.pprof`
+
+To dig into the cpu profile of a benchmark test: `go tool pprof go-audit.test cpu.pprof`
 
 ##### Running as a service
  
 Check the [contrib](contrib) folder, it contains examples for how to run `go-audit` as a proper service on your machine.
+
+##### Example Config 
+
+See [go-audit.yaml.example](go-audit.yaml.example)
 
 ## FAQ
 
