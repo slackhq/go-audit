@@ -36,6 +36,10 @@ If you want to run benchmark tests: `go test -bench=. -benchtime=5s -cpuprofile=
 
 To dig into the cpu profile of a benchmark test: `go tool pprof go-audit.test cpu.pprof`
 
+Code coverage:
+- `go test -coverprofile=coverage.out`
+- `go tool cover -html=coverage.out`
+
 ##### Running as a service
  
 Check the [contrib](contrib) folder, it contains examples for how to run `go-audit` as a proper service on your machine.

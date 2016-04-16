@@ -15,7 +15,8 @@ import (
 	"log"
 )
 
-var l, el *log.Logger
+var l = log.New(os.Stdout, "", 0)
+var el = log.New(os.Stderr, "", 0)
 
 func loadConfig(config *viper.Viper, cFile string) {
 	config.SetDefault("canary", true)
@@ -85,9 +86,6 @@ func createOutput(config *viper.Viper) io.Writer {
 }
 
 func main() {
-	l = log.New(os.Stdout, "", 0)
-	el = log.New(os.Stderr, "", 0)
-
 	config := viper.New()
 	configFile := flag.String("config", "", "Config file location, default /etc/audit/go-audit.yaml")
 	cpuProfile := flag.Bool("cpuprofile", false, "Enable cpu profiling")

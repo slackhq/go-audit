@@ -3,3 +3,4 @@ go-audit.yaml
 *.pprof
 *.test
 *.deb
+*.out
