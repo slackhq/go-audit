@@ -9,10 +9,10 @@ import (
 	"os"
 )
 
-func Test_loadConfig_defaultValues(t *testing.T) {
+func Test_loadConfig(t *testing.T) {
 	config := viper.New()
 
-	file := createTempFile("defaultValues.test.yaml", t)
+	file := createTempFile(t, "defaultValues.test.yaml", "")
 	defer os.Remove(file)
 
 	loadConfig(config, file)
@@ -24,6 +24,14 @@ func Test_loadConfig_defaultValues(t *testing.T) {
 	assert.Equal(t, 132, config.GetInt("output.syslog.priority"), "output.syslog.priority should default to 132")
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
+
+	lb, elb := hookLogger()
+	defer resetLogger()
+
+	file = createTempFile(t, "defaultValues.test.yaml", "this is bad")
+	loadConfig(config, file)
+	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
+	assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
 }
 
 func Test_loadConfig_fail(t *testing.T) {
@@ -99,9 +107,9 @@ func (t *noopWriter) Write(a []byte) (int, error) {
 	return 0, nil
 }
 
-func createTempFile(name string, t *testing.T) string {
+func createTempFile(t *testing.T, name string, contents string) string {
 	file := os.TempDir() + string(os.PathSeparator) + "go-audit." + name
-	if err := ioutil.WriteFile(file, []byte{}, os.FileMode(0644)); err != nil {
+	if err := ioutil.WriteFile(file, []byte(contents), os.FileMode(0644)); err != nil {
 		t.Fatal("Failed to create temp file", err)
 	}
 	return file

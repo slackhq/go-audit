@@ -32,7 +32,7 @@ func loadConfig(config *viper.Viper, cFile string) {
 
 	err := config.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		el.Println("Config file %s has an error: %s\n", cFile, err)
+		el.Printf("Config file %s has an error: %s\n", cFile, err)
 		os.Exit(1)
 	}
 }
