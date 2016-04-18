@@ -25,13 +25,14 @@ func Test_loadConfig(t *testing.T) {
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
 
-	lb, elb := hookLogger()
-	defer resetLogger()
-
-	file = createTempFile(t, "defaultValues.test.yaml", "this is bad")
-	loadConfig(config, file)
-	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
-	assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
+	//TODO: this doesn't work because loadConfig calls os.Exit
+	//lb, elb := hookLogger()
+	//defer resetLogger()
+	//
+	//file = createTempFile(t, "defaultValues.test.yaml", "this is bad")
+	//loadConfig(config, file)
+	//assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
+	//assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
 }
 
 func Test_loadConfig_fail(t *testing.T) {
