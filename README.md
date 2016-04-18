@@ -30,15 +30,11 @@ I became interested in creating a replacement for the existing daemon.
 
 ##### Testing
 
-If you want to run unit tests: `go test`
-
-If you want to run benchmark tests: `go test -bench=. -benchtime=5s -cpuprofile=cpu.pprof`
-
-To dig into the cpu profile of a benchmark test: `go tool pprof go-audit.test cpu.pprof`
-
-Code coverage:
-- `go test -coverprofile=coverage.out`
-- `go tool cover -html=coverage.out`
+- `make test` - run the unit test suite
+- `make test-cov-html` - run the unit tests and open up the code coverage results
+- `make bench` - run the benchmark test suite
+- `make bench-cpu` - run the benchmark test suite with cpu profiling
+- `make bench-cpu0long` - run the benchmark test suite with cpu profiling and try to get some gc collection
 
 ##### Running as a service
  
