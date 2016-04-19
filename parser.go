@@ -41,6 +41,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
+		Msgs:          make([]*AuditMessage, 0, 6),
 	}
 
 	amg.AddMessage(am)
@@ -103,21 +104,31 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 			break
 		}
 
+		// Progress the start point beyon the = sign
 		start += 4
 		if end = strings.IndexByte(data[start:], " "[0]); end < 0 {
-			break
+			// There was no ending space, maybe the uid is at the end of the line
+			end = len(data) - start
+
+			// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a uid
+			if end > 5 {
+				break
+			}
 		}
 
 		uid := data[start:start + end]
+
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.UidMap[uid]; !ok {
 			amg.UidMap[uid] = getUsername(data[start:start + end])
 		}
 
+		// Find the next uid= if we have space for one
 		next := start + end + 1
 		if (next >= len(data)) {
 			break
 		}
+
 		data = data[next:]
 	}
 

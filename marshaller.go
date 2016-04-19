@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 	"syscall"
-	"fmt"
 	"io"
 	"os"
 )
@@ -96,8 +95,8 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	}
 
 	if err := a.encoder.Encode(msg); err != nil {
-		fmt.Println("Failed to write message. Error:", err)
-		fmt.Println(msg)
+		el.Println("Failed to write message. Error:", err)
+		el.Println(msg)
 		os.Exit(1)
 	}
 
@@ -121,11 +120,11 @@ func (a *AuditMarshaller) detectMissing(seq int) {
 			}
 
 			if (a.logOutOfOrder) {
-				fmt.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
+				el.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
 			}
 			delete(a.missed, missedSeq)
 		} else if seq - missedSeq > a.maxOutOfOrder {
-			fmt.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
+			el.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
 			delete(a.missed, missedSeq)
 		}
 	}

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#depends on `fpm`
+# depends on `fpm`, install via `gem`
 
 VERSION="0.14.0"
 BUILD="yourcompany"
@@ -14,6 +14,11 @@ mkdir -p "$PWD/rootfs/usr/local/bin"
 mv "$PWD/go-audit" "$PWD/rootfs/usr/local/bin/"
 
 fakeroot fpm -C "$PWD/rootfs" \
+    --license "MIT" \
+    --url "https://github.com/slackhq/go-audit" \
+    --vendor "" \
+    --description "go-audit is an alternative to the auditd daemon that ships with many distros." \
+    -d "auditd" \
     -m "${CONTACT}" \
     -n "${PACKAGE_NAME}" -v "$VERSION-$BUILD" \
     -p "$OLDESTPWD/${PACKAGE_NAME}_${VERSION}-${BUILD}_amd64.deb" \

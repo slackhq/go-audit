@@ -21,7 +21,7 @@ message_tracking:
   # Maximum out of orderness before a missed sequence is presumed dropped, default 500
   max_out_of_order: 500
 
-# Configure where to output logs to
+# Configure where to output audit events to
 output:
   syslog:
     enabled: true
@@ -41,6 +41,21 @@ output:
     # Typically the name of the program generating the message. The PID is of the process is appended for you: [1233]
     # Default value is "go-audit"
     tag: "audit-thing"
+
+# Configure logging, only stdout and stderr are used.
+log:
+  # Gives you a bit of control over log line prefixes. Default is 0 - nothing.
+  # To get the `filename:lineno` you would set this to 16
+  #
+  # Ldate         = 1  // the date in the local time zone: 2009/01/23
+  # Ltime         = 2  // the time in the local time zone: 01:23:23
+  # Lmicroseconds = 4  // microsecond resolution: 01:23:23.123123.  assumes Ltime.
+  # Llongfile     = 8  // full file name and line number: /a/b/c/d.go:23
+  # Lshortfile    = 16 // final file name element and line number: d.go:23. overrides Llongfile
+  # LUTC          = 32 // if Ldate or Ltime is set, use UTC rather than the local time zone
+  #
+  # See also: https://golang.org/pkg/log/#pkg-constants
+  flags: 0
 
 rules:
   # Watch all 64 bit program executions

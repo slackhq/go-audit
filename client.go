@@ -2,11 +2,9 @@ package main
 
 import (
 	"syscall"
-	"log"
 	"sync/atomic"
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"time"
 	"errors"
 )
@@ -37,7 +35,7 @@ type NetlinkPacket syscall.NlMsghdr
 
 type NetlinkClient struct {
 	fd             int
-	address        syscall.SockaddrNetlink
+	address        syscall.Sockaddr
 	seq            uint32
 	buf            []byte
 }
@@ -45,18 +43,18 @@ type NetlinkClient struct {
 func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
-		log.Fatal("Could not create a socket:", err)
+		el.Fatalln("Could not create a socket:", err)
 	}
 
 	n := &NetlinkClient{
 		fd: fd,
-		address: syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: 0, Pid: 0},
+		address: &syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: 0, Pid: 0},
 		buf:     make([]byte, MAX_AUDIT_MESSAGE_LENGTH),
 	}
 
-	if err = syscall.Bind(fd, &n.address); err != nil {
+	if err = syscall.Bind(fd, n.address); err != nil {
 		syscall.Close(fd)
-		log.Fatal("Could not bind to netlink socket:", err)
+		el.Fatalln("Could not bind to netlink socket:", err)
 	}
 
 	// Set the buffer size if we were asked
@@ -66,18 +64,42 @@ func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 
 	// Print the current receive buffer size
 	if v, err := syscall.GetsockoptInt(n.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF); err == nil {
-		fmt.Println("Socket receive buffer size:", v)
+		l.Println("Socket receive buffer size:", v)
 	}
 
-	go n.KeepConnection()
+	go func() {
+		for {
+			n.KeepConnection()
+			time.Sleep(time.Second * 5)
+		}
+	}()
 
 	return n
 }
 
-func (n *NetlinkClient) Send(packet *[]byte) error {
-	if err := syscall.Sendto(n.fd, *packet, 0, &n.address); err != nil {
+func (n *NetlinkClient) Send(np *NetlinkPacket, a *AuditStatusPayload) error {
+	//We need to get the length first. This is a bit wasteful, but requests are rare so yolo..
+	buf := new(bytes.Buffer)
+	var length int
+
+	np.Seq = atomic.AddUint32(&n.seq, 1)
+
+	for {
+		buf.Reset()
+		binary.Write(buf, Endianness, np)
+		binary.Write(buf, Endianness, a)
+		if np.Len == 0 {
+			length = len(buf.Bytes())
+			np.Len = uint32(length)
+		} else {
+			break
+		}
+	}
+
+	if err := syscall.Sendto(n.fd, buf.Bytes(), 0, n.address); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -106,48 +128,21 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 }
 
 func (n *NetlinkClient) KeepConnection() {
-	for {
-		var ret []byte
-
-		payload := &AuditStatusPayload{
-			Mask: 4,
-			Enabled: 1,
-			Pid: uint32(syscall.Getpid()),
-			//TODO: Failure: http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L338
-		}
-
-		packet := &NetlinkPacket{
-			Type: uint16(1001),
-			Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_ACK,
-			Seq: atomic.AddUint32(&n.seq, 1),
-			Pid: uint32(syscall.Getpid()),
-		}
-
-		ret, _ = AuditRequestSerialize(packet, payload)
-
-		err := n.Send(&ret)
-		if err != nil {
-			fmt.Println("Error occurred while trying to keep the connection:", err)
-		}
-
-		time.Sleep(time.Second * 5)
+	payload := &AuditStatusPayload{
+		Mask: 4,
+		Enabled: 1,
+		Pid: uint32(syscall.Getpid()),
+		//TODO: Failure: http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L338
 	}
-}
 
-func AuditRequestSerialize(n *NetlinkPacket, a *AuditStatusPayload) (data []byte, err error) {
-	//We need to get the length first. This is a bit wasteful, but requests are rare so yolo..
-	buf := new(bytes.Buffer)
-	var length int
-	for {
-		buf.Reset()
-		binary.Write(buf, Endianness, n)
-		binary.Write(buf, Endianness, a)
-		if n.Len == 0 {
-			length = len(buf.Bytes())
-			n.Len = uint32(length)
-		} else {
-			break
-		}
+	packet := &NetlinkPacket{
+		Type: uint16(1001),
+		Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_ACK,
+		Pid: uint32(syscall.Getpid()),
 	}
-	return buf.Bytes(), err
+
+	err := n.Send(packet, payload)
+	if err != nil {
+		el.Println("Error occurred while trying to keep the connection:", err)
+	}
 }
