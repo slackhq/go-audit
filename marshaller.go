@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"time"
 	"syscall"
-	"io"
 	"os"
 )
 
@@ -16,19 +14,20 @@ const (
 
 type AuditMarshaller struct {
 	msgs map[int]*AuditMessageGroup
-	encoder *json.Encoder
+	writer *AuditWriter
 	lastSeq int
 	missed map[int]bool
 	worstLag int
 	trackMessages bool
 	logOutOfOrder bool
 	maxOutOfOrder int
+	attempts int
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w io.Writer, trackMessages, logOOO bool, maxOOO int) (*AuditMarshaller){
+func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int) (*AuditMarshaller){
 	return &AuditMarshaller{
-		encoder: json.NewEncoder(w),
+		writer: w,
 		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
 		missed: make(map[int]bool, 10),
 		trackMessages: trackMessages,
@@ -94,9 +93,8 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		return
 	}
 
-	if err := a.encoder.Encode(msg); err != nil {
+	if err := a.writer.Write(msg); err != nil {
 		el.Println("Failed to write message. Error:", err)
-		el.Println(msg)
 		os.Exit(1)
 	}
 

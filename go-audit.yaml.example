@@ -26,6 +26,11 @@ output:
   syslog:
     enabled: true
 
+    # Total number of attempts to send a message before considering the syslog server gone
+    # If a write fails go-audit will sleep for 1 second before retrying
+    # default is 3
+    attempts: 5
+
     # Configure the type of socket this should be, default is unixgram
     # This maps to `network` in golangs net.Dial: https://golang.org/pkg/net/#Dial
     network: unixgram

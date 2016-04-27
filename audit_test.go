@@ -15,14 +15,16 @@ func Test_loadConfig(t *testing.T) {
 	file := createTempFile(t, "defaultValues.test.yaml", "")
 	defer os.Remove(file)
 
-	loadConfig(config, file)
+	config.SetConfigFile(file)
+	loadConfig(config)
 	assert.Equal(t, true, config.GetBool("canary"), "canary should default to true")
 	assert.Equal(t, true, config.GetBool("message_tracking.enabled"), "message_tracking.enabled should default to true")
 	assert.Equal(t, false, config.GetBool("message_tracking.log_out_of_order"), "message_tracking.log_out_of_order should default to false")
 	assert.Equal(t, 500, config.GetInt("message_tracking.max_out_of_order"), "message_tracking.max_out_of_order should default to 500")
-	assert.Equal(t, true, config.GetBool("output.syslog.enabled"), "output.syslog.enabled should default to true")
+	assert.Equal(t, false, config.GetBool("output.syslog.enabled"), "output.syslog.enabled should default to false")
 	assert.Equal(t, 132, config.GetInt("output.syslog.priority"), "output.syslog.priority should default to 132")
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
+	assert.Equal(t, 3, config.GetInt("output.syslog.attempts"), "output.syslog.attempts should default to 3")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
 
 	//TODO: this doesn't work because loadConfig calls os.Exit
@@ -61,7 +63,7 @@ func Test_main(t *testing.T) {
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
-	marshaller := NewAuditMarshaller(&noopWriter{}, false, false, 1)
+	marshaller := NewAuditMarshaller(NewAuditWriter(&noopWriter{}, 1), false, false, 1)
 
 	data := make([][]byte, 6)
 

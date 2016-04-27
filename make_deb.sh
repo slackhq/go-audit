@@ -2,14 +2,15 @@
 
 # depends on `fpm`, install via `gem`
 
-VERSION="0.14.0"
-BUILD="yourcompany"
+VERSION="0.15.0"
+BUILD="slack1"
 CONTACT="Jane Doe <janed@example.com>"
 PACKAGE_NAME="go-audit"
 
 DIRNAME="$(cd "$(dirname "$0")" && pwd)"
 OLDESTPWD="$PWD"
 
+go build
 mkdir -p "$PWD/rootfs/usr/local/bin"
 mv "$PWD/go-audit" "$PWD/rootfs/usr/local/bin/"
 

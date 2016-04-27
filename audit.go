@@ -11,28 +11,26 @@ import (
 	"log/syslog"
 	"flag"
 	"os"
-	"io"
 	"log"
 )
 
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
 
-func loadConfig(config *viper.Viper, cFile string) {
+func loadConfig(config *viper.Viper) {
 	config.SetDefault("canary", true)
 	config.SetDefault("message_tracking.enabled", true)
 	config.SetDefault("message_tracking.log_out_of_order", false)
 	config.SetDefault("message_tracking.max_out_of_order", 500)
-	config.SetDefault("output.syslog.enabled", true)
+	config.SetDefault("output.syslog.enabled", false)
 	config.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0 | syslog.LOG_WARNING))
 	config.SetDefault("output.syslog.tag", "go-audit")
+	config.SetDefault("output.syslog.attempts", "3")
 	config.SetDefault("log.flags", 0)
-
-	config.SetConfigFile(cFile)
 
 	err := config.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		el.Printf("Config file %s has an error: %s\n", cFile, err)
+		el.Printf("Config file has an error: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -66,9 +64,14 @@ func setRules(config *viper.Viper) {
 	}
 }
 
-func createOutput(config *viper.Viper) io.Writer {
+func createOutput(config *viper.Viper) *AuditWriter {
 	if config.GetBool("output.syslog.enabled") == false {
 		el.Fatalln("No outputs have been enabled")
+	}
+
+	attempts := config.GetInt("output.syslog.attempts")
+	if attempts < 1 {
+		el.Fatalln("output attempts for syslog must be at least 1", attempts, "provided")
 	}
 
 	syslogWriter, err := syslog.Dial(
@@ -82,7 +85,7 @@ func createOutput(config *viper.Viper) io.Writer {
 		el.Fatalln("Failed to open syslog writer. Error:", err)
 	}
 
-	return syslogWriter
+	return NewAuditWriter(syslogWriter, attempts)
 }
 
 func main() {
@@ -98,7 +101,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	loadConfig(config, *configFile)
+	config.SetConfigFile(*configFile)
+	loadConfig(config)
 
 	l.SetFlags(config.GetInt("log.flags"))
 	el.SetFlags(config.GetInt("log.flags"))
