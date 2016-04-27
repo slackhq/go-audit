@@ -1,3 +1,9 @@
+#########################################################################################
+# Please not that until this bug https://github.com/spf13/viper/pull/165 is fixed       #
+# you _must_ specify all values despite the fact that they talk about having a default. #
+# Hopefully this problem with viper goes away soon                                      #
+#########################################################################################
+
 # Reads /proc/net/netlink every 5 seconds
 # you should set a file watch rule to pick the file access `-w /proc/net/netlink -p war -k netlink-file`
 canary: true
