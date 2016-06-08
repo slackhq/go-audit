@@ -1,28 +1,28 @@
 package main
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
-	"time"
 	"os/user"
 	"syscall"
+	"testing"
+	"time"
 )
 
 func TestAuditConstants(t *testing.T) {
 	assert.Equal(t, 7, HEADER_MIN_LENGTH)
 	assert.Equal(t, 6, HEADER_START_POS)
-	assert.Equal(t, time.Second * 2, COMPLETE_AFTER)
+	assert.Equal(t, time.Second*2, COMPLETE_AFTER)
 	assert.Equal(t, []byte{")"[0]}, headerEndChar)
 }
 
 func TestNewAuditMessage(t *testing.T) {
 	msg := &syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1309),
+			Len:   uint32(44),
+			Type:  uint16(1309),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:99): hi there"),
 	}
@@ -79,10 +79,10 @@ func TestAuditMessageGroup_AddMessage(t *testing.T) {
 func TestNewAuditMessageGroup(t *testing.T) {
 	uidMap = make(map[string]user.User, 0)
 	m := &AuditMessage{
-		Type: uint16(1300),
-		Seq: 1019,
+		Type:      uint16(1300),
+		Seq:       1019,
 		AuditTime: "9919",
-		Data: "Stuff is here",
+		Data:      "Stuff is here",
 	}
 
 	amg := NewAuditMessageGroup(m)

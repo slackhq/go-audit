@@ -1,12 +1,12 @@
 package main
 
 import (
-	"syscall"
-	"sync/atomic"
 	"bytes"
 	"encoding/binary"
-	"time"
 	"errors"
+	"sync/atomic"
+	"syscall"
+	"time"
 )
 
 var Endianness = binary.LittleEndian
@@ -34,20 +34,20 @@ type AuditStatusPayload struct {
 type NetlinkPacket syscall.NlMsghdr
 
 type NetlinkClient struct {
-	fd             int
-	address        syscall.Sockaddr
-	seq            uint32
-	buf            []byte
+	fd      int
+	address syscall.Sockaddr
+	seq     uint32
+	buf     []byte
 }
 
-func NewNetlinkClient(recvSize int) (*NetlinkClient) {
+func NewNetlinkClient(recvSize int) *NetlinkClient {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
 		el.Fatalln("Could not create a socket:", err)
 	}
 
 	n := &NetlinkClient{
-		fd: fd,
+		fd:      fd,
 		address: &syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: 0, Pid: 0},
 		buf:     make([]byte, MAX_AUDIT_MESSAGE_LENGTH),
 	}
@@ -58,7 +58,7 @@ func NewNetlinkClient(recvSize int) (*NetlinkClient) {
 	}
 
 	// Set the buffer size if we were asked
-	if (recvSize > 0) {
+	if recvSize > 0 {
 		err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, recvSize)
 	}
 
@@ -115,11 +115,11 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 
 	msg := &syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: Endianness.Uint32(n.buf[0:4]),
-			Type: Endianness.Uint16(n.buf[4:6]),
+			Len:   Endianness.Uint32(n.buf[0:4]),
+			Type:  Endianness.Uint16(n.buf[4:6]),
 			Flags: Endianness.Uint16(n.buf[6:8]),
-			Seq: Endianness.Uint32(n.buf[8:12]),
-			Pid: Endianness.Uint32(n.buf[12:16]),
+			Seq:   Endianness.Uint32(n.buf[8:12]),
+			Pid:   Endianness.Uint32(n.buf[12:16]),
 		},
 		Data: n.buf[syscall.SizeofNlMsghdr:nlen],
 	}
@@ -129,16 +129,16 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 
 func (n *NetlinkClient) KeepConnection() {
 	payload := &AuditStatusPayload{
-		Mask: 4,
+		Mask:    4,
 		Enabled: 1,
-		Pid: uint32(syscall.Getpid()),
+		Pid:     uint32(syscall.Getpid()),
 		//TODO: Failure: http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L338
 	}
 
 	packet := &NetlinkPacket{
-		Type: uint16(1001),
+		Type:  uint16(1001),
 		Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_ACK,
-		Pid: uint32(syscall.Getpid()),
+		Pid:   uint32(syscall.Getpid()),
 	}
 
 	err := n.Send(packet, payload)

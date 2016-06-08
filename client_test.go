@@ -1,12 +1,12 @@
 package main
 
 import (
-	"testing"
-	"syscall"
-	"os"
-	"github.com/stretchr/testify/assert"
 	"bytes"
 	"encoding/binary"
+	"github.com/stretchr/testify/assert"
+	"os"
+	"syscall"
+	"testing"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
@@ -19,7 +19,7 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 		t.Fatal("Did not expect an error", err)
 	}
 
-	expectedData := []byte{4,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+	expectedData := []byte{4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	binary.LittleEndian.PutUint32(expectedData[12:16], uint32(os.Getpid()))
 
 	assert.Equal(t, uint16(1001), msg.Header.Type, "Header.Type mismatch")
@@ -43,19 +43,19 @@ func TestNetlinkClient_SendReceive(t *testing.T) {
 
 	// Build our client
 	n := makeNelinkClient(t)
-    defer syscall.Close(n.fd)
+	defer syscall.Close(n.fd)
 
 	// Make sure we can encode/decode properly
 	payload := &AuditStatusPayload{
-		Mask: 4,
+		Mask:    4,
 		Enabled: 1,
-		Pid: uint32(1006),
+		Pid:     uint32(1006),
 	}
 
 	packet := &NetlinkPacket{
-		Type: uint16(1001),
+		Type:  uint16(1001),
 		Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_ACK,
-		Pid: uint32(1006),
+		Pid:   uint32(1006),
 	}
 
 	msg = sendReceive(t, n, packet, payload)
@@ -65,7 +65,7 @@ func TestNetlinkClient_SendReceive(t *testing.T) {
 	assert.Equal(t, packet.Flags, msg.Header.Flags, "Header.Flags mismatch")
 	assert.Equal(t, uint32(1), msg.Header.Seq, "Header.Seq mismatch")
 	assert.Equal(t, uint32(56), msg.Header.Len, "Packet size is wrong - this test is brittle though")
-	assert.EqualValues(t, msg.Data[:40], []byte{4,0,0,0,1,0,0,0,0,0,0,0,238,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, "data was wrong")
+	assert.EqualValues(t, msg.Data[:40], []byte{4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 238, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, "data was wrong")
 
 	// Make sure sequences numbers increment on our side
 	msg = sendReceive(t, n, packet, payload)
@@ -111,7 +111,7 @@ func makeNelinkClient(t *testing.T) *NetlinkClient {
 	}
 
 	n := &NetlinkClient{
-		fd: fd,
+		fd:      fd,
 		address: &syscall.SockaddrUnix{Name: "go-audit.test.sock"},
 		buf:     make([]byte, MAX_AUDIT_MESSAGE_LENGTH),
 	}
@@ -125,7 +125,7 @@ func makeNelinkClient(t *testing.T) *NetlinkClient {
 }
 
 // Helper to send and then receive a message with the netlink client
-func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload *AuditStatusPayload) (*syscall.NetlinkMessage) {
+func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload *AuditStatusPayload) *syscall.NetlinkMessage {
 	err := n.Send(packet, payload)
 	if err != nil {
 		t.Fatal("Failed to send:", err)

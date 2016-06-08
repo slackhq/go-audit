@@ -1,12 +1,12 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"bytes"
-	"syscall"
-	"time"
 	"errors"
+	"github.com/stretchr/testify/assert"
+	"syscall"
+	"testing"
+	"time"
 )
 
 func TestMarshallerConstants(t *testing.T) {
@@ -22,22 +22,22 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	// Flush group on 1320
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1300),
+			Len:   uint32(44),
+			Type:  uint16(1300),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:1): hi there"),
 	})
 
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1301),
+			Len:   uint32(44),
+			Type:  uint16(1301),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:1): hi there"),
 	})
@@ -55,11 +55,11 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1299),
+			Len:   uint32(44),
+			Type:  uint16(1299),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:2): hi there"),
 	})
@@ -70,11 +70,11 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1400),
+			Len:   uint32(44),
+			Type:  uint16(1400),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:3): hi there"),
 	})
@@ -85,11 +85,11 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1400),
+			Len:   uint32(44),
+			Type:  uint16(1400),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:0): hi there"),
 	})
@@ -100,11 +100,11 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1300),
+			Len:   uint32(44),
+			Type:  uint16(1300),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:4): hi there"),
 	})
@@ -129,11 +129,11 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1300),
+			Len:   uint32(44),
+			Type:  uint16(1300),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:4): hi there"),
 	})
@@ -146,11 +146,11 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 func new1320(seq string) *syscall.NetlinkMessage {
 	return &syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
-			Len: uint32(44),
-			Type: uint16(1320),
+			Len:   uint32(44),
+			Type:  uint16(1320),
 			Flags: uint16(0),
-			Seq: uint32(0),
-			Pid: uint32(0),
+			Seq:   uint32(0),
+			Pid:   uint32(0),
 		},
 		Data: []byte("audit(10000001:" + seq + "): "),
 	}

@@ -2,26 +2,26 @@ package main
 
 import (
 	"encoding/json"
-	"time"
 	"io"
+	"time"
 )
 
 type AuditWriter struct {
-	e *json.Encoder
-	w io.Writer
+	e        *json.Encoder
+	w        io.Writer
 	attempts int
 }
 
 func NewAuditWriter(w io.Writer, attempts int) *AuditWriter {
 	return &AuditWriter{
-		e: json.NewEncoder(w),
-		w: w,
+		e:        json.NewEncoder(w),
+		w:        w,
 		attempts: attempts,
 	}
 }
 
 func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
-	for i :=0; i < a.attempts; i++ {
+	for i := 0; i < a.attempts; i++ {
 		err = a.e.Encode(msg)
 		if err == nil {
 			break

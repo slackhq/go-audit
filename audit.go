@@ -4,14 +4,14 @@
 package main
 
 import (
-	"os/exec"
-	"strings"
+	"flag"
 	"github.com/pkg/profile"
 	"github.com/spf13/viper"
-	"log/syslog"
-	"flag"
-	"os"
 	"log"
+	"log/syslog"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -23,13 +23,13 @@ func loadConfig(config *viper.Viper) {
 	config.SetDefault("message_tracking.log_out_of_order", false)
 	config.SetDefault("message_tracking.max_out_of_order", 500)
 	config.SetDefault("output.syslog.enabled", false)
-	config.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0 | syslog.LOG_WARNING))
+	config.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0|syslog.LOG_WARNING))
 	config.SetDefault("output.syslog.tag", "go-audit")
 	config.SetDefault("output.syslog.attempts", "3")
 	config.SetDefault("log.flags", 0)
 
 	err := config.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
+	if err != nil {              // Handle errors reading the config file
 		el.Printf("Config file has an error: %s\n", err)
 		os.Exit(1)
 	}
@@ -54,10 +54,10 @@ func setRules(config *viper.Viper) {
 
 			err := exec.Command("auditctl", strings.Fields(v)...).Run()
 			if err != nil {
-				el.Fatalf("Failed to add rule #%d. Error: %s \n", i + 1, err)
+				el.Fatalf("Failed to add rule #%d. Error: %s \n", i+1, err)
 			}
 
-			l.Printf("Added audit rule #%d\n", i + 1)
+			l.Printf("Added audit rule #%d\n", i+1)
 		}
 	} else {
 		el.Fatalln("No audit rules found. exiting")

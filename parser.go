@@ -19,17 +19,17 @@ const (
 )
 
 type AuditMessage struct {
-	Type uint16 `json:"type"`
-	Data string `json:"data"`
-	Seq int `json:"-"`
+	Type      uint16 `json:"type"`
+	Data      string `json:"data"`
+	Seq       int    `json:"-"`
 	AuditTime string `json:"-"`
 }
 
 type AuditMessageGroup struct {
-	Seq           int `json:"sequence"`
-	AuditTime     string `json:"timestamp"`
-	CompleteAfter time.Time `json:"-"`
-	Msgs          []*AuditMessage `json:"messages"`
+	Seq           int               `json:"sequence"`
+	AuditTime     string            `json:"timestamp"`
+	CompleteAfter time.Time         `json:"-"`
+	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
 }
 
@@ -52,9 +52,9 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
 	aTime, seq := parseAuditHeader(nlm)
 	return &AuditMessage{
-		Type: nlm.Header.Type,
-		Data: string(nlm.Data),
-		Seq: seq,
+		Type:      nlm.Header.Type,
+		Data:      string(nlm.Data),
+		Seq:       seq,
 		AuditTime: aTime,
 	}
 }
@@ -72,10 +72,10 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 		//TODO: out of range check, possibly fully binary?
 		sep := strings.IndexByte(header, ":"[0])
 		time = header[HEADER_START_POS:sep]
-		seq, _ = strconv.Atoi(header[sep + 1:])
+		seq, _ = strconv.Atoi(header[sep+1:])
 
 		// Remove the header from data
-		msg.Data = msg.Data[headerStop + 3:]
+		msg.Data = msg.Data[headerStop+3:]
 	}
 
 	return time, seq
@@ -116,16 +116,16 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 			}
 		}
 
-		uid := data[start:start + end]
+		uid := data[start : start+end]
 
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.UidMap[uid]; !ok {
-			amg.UidMap[uid] = getUsername(data[start:start + end])
+			amg.UidMap[uid] = getUsername(data[start : start+end])
 		}
 
 		// Find the next uid= if we have space for one
 		next := start + end + 1
-		if (next >= len(data)) {
+		if next >= len(data) {
 			break
 		}
 
@@ -135,7 +135,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 }
 
 // Gets a username for a user id
-func getUsername(uid string) (string) {
+func getUsername(uid string) string {
 	uname := "UNKNOWN_USER"
 
 	//Make sure we have a uid element to work with.

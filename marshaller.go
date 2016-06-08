@@ -1,35 +1,35 @@
 package main
 
 import (
-	"time"
-	"syscall"
 	"os"
+	"syscall"
+	"time"
 )
 
 const (
 	EVENT_START = 1300 // Start of the audit type ids that we care about
-	EVENT_END = 1399 // End of the audit type ids that we care about
-	EVENT_EOE = 1320 // End of multi packet event
+	EVENT_END   = 1399 // End of the audit type ids that we care about
+	EVENT_EOE   = 1320 // End of multi packet event
 )
 
 type AuditMarshaller struct {
-	msgs map[int]*AuditMessageGroup
-	writer *AuditWriter
-	lastSeq int
-	missed map[int]bool
-	worstLag int
+	msgs          map[int]*AuditMessageGroup
+	writer        *AuditWriter
+	lastSeq       int
+	missed        map[int]bool
+	worstLag      int
 	trackMessages bool
 	logOutOfOrder bool
 	maxOutOfOrder int
-	attempts int
+	attempts      int
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int) (*AuditMarshaller){
+func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int) *AuditMarshaller {
 	return &AuditMarshaller{
-		writer: w,
-		msgs: make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
-		missed: make(map[int]bool, 10),
+		writer:        w,
+		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
+		missed:        make(map[int]bool, 10),
 		trackMessages: trackMessages,
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
@@ -47,11 +47,11 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		return
 	}
 
-	if (a.trackMessages) {
+	if a.trackMessages {
 		a.detectMissing(aMsg.Seq)
 	}
 
-	if (nlMsg.Header.Type < EVENT_START || nlMsg.Header.Type > EVENT_END) {
+	if nlMsg.Header.Type < EVENT_START || nlMsg.Header.Type > EVENT_END {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
 		a.flushOld()
 		return
@@ -103,7 +103,7 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 
 // Track sequence numbers and log if we suspect we missed a message
 func (a *AuditMarshaller) detectMissing(seq int) {
-	if seq > a.lastSeq + 1 && a.lastSeq != 0 {
+	if seq > a.lastSeq+1 && a.lastSeq != 0 {
 		// We likely leap frogged over a msg, wait until the next sequence to make sure
 		for i := a.lastSeq + 1; i < seq; i++ {
 			a.missed[i] = true
@@ -117,18 +117,18 @@ func (a *AuditMarshaller) detectMissing(seq int) {
 				a.worstLag = lag
 			}
 
-			if (a.logOutOfOrder) {
+			if a.logOutOfOrder {
 				el.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
 			}
 			delete(a.missed, missedSeq)
-		} else if seq - missedSeq > a.maxOutOfOrder {
+		} else if seq-missedSeq > a.maxOutOfOrder {
 			el.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
 			delete(a.missed, missedSeq)
 		}
 	}
 
-   if seq > a.lastSeq {
-       // Keep track of the largest sequence
-       a.lastSeq = seq
-   }
+	if seq > a.lastSeq {
+		// Keep track of the largest sequence
+		a.lastSeq = seq
+	}
 }
