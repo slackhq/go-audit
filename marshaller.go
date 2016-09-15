@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"regexp"
 	"syscall"
 	"time"
 )
@@ -22,18 +23,40 @@ type AuditMarshaller struct {
 	logOutOfOrder bool
 	maxOutOfOrder int
 	attempts      int
+	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+}
+
+type AuditFilter struct {
+	messageType uint16
+	regex       *regexp.Regexp
+	syscall     string
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int) *AuditMarshaller {
-	return &AuditMarshaller{
+func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+	am := AuditMarshaller{
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
 		missed:        make(map[int]bool, 10),
 		trackMessages: trackMessages,
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
+		filters:       make(map[string]map[uint16][]*regexp.Regexp),
 	}
+
+	for _, filter := range filters {
+		if _, ok := am.filters[filter.syscall]; !ok {
+			am.filters[filter.syscall] = make(map[uint16][]*regexp.Regexp)
+		}
+
+		if _, ok := am.filters[filter.syscall][filter.messageType]; !ok {
+			am.filters[filter.syscall][filter.messageType] = []*regexp.Regexp{}
+		}
+
+		am.filters[filter.syscall][filter.messageType] = append(am.filters[filter.syscall][filter.messageType], filter.regex)
+	}
+
+	return &am
 }
 
 // Ingests a netlink message and likely prepares it to be logged
@@ -93,12 +116,36 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		return
 	}
 
+	if a.dropMessage(msg) {
+		delete(a.msgs, seq)
+		return
+	}
+
 	if err := a.writer.Write(msg); err != nil {
 		el.Println("Failed to write message. Error:", err)
 		os.Exit(1)
 	}
 
 	delete(a.msgs, seq)
+}
+
+func (a *AuditMarshaller) dropMessage(msg *AuditMessageGroup) bool {
+	filters, ok := a.filters[msg.Syscall]
+	if !ok {
+		return false
+	}
+
+	for _, msg := range msg.Msgs {
+		if fg, ok := filters[msg.Type]; ok {
+			for _, filter := range fg {
+				if filter.MatchString(msg.Data) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 // Track sequence numbers and log if we suspect we missed a message

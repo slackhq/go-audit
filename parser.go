@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
-var uidMap = map[string]user.User{}
+var uidMap = map[string]string{}
 var headerEndChar = []byte{")"[0]}
+var headerSepChar = byte(':')
+var spaceChar = byte(' ')
 
 const (
 	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
@@ -31,6 +33,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
+	Syscall       string            `json:"-"`
 }
 
 // Creates a new message group from the details parsed from the message
@@ -70,7 +73,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 	header := string(msg.Data[:headerStop])
 	if header[:HEADER_START_POS] == "audit(" {
 		//TODO: out of range check, possibly fully binary?
-		sep := strings.IndexByte(header, ":"[0])
+		sep := strings.IndexByte(header, headerSepChar)
 		time = header[HEADER_START_POS:sep]
 		seq, _ = strconv.Atoi(header[sep+1:])
 
@@ -86,14 +89,17 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307:
+	case 1309, 1307, 1306:
 		// Don't map uids here
+	case 1300:
+		amg.findSyscall(am)
+		amg.mapUids(am)
 	default:
 		amg.mapUids(am)
 	}
 }
 
-// Find all `uid=` occurences in a message and adds the username to the UidMap object
+// Find all `uid=` occurrences in a message and adds the username to the UidMap object
 func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 	data := am.Data
 	start := 0
@@ -106,7 +112,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 
 		// Progress the start point beyon the = sign
 		start += 4
-		if end = strings.IndexByte(data[start:], " "[0]); end < 0 {
+		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
 			// There was no ending space, maybe the uid is at the end of the line
 			end = len(data) - start
 
@@ -134,22 +140,44 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 
 }
 
+func (amg *AuditMessageGroup) findSyscall(am *AuditMessage) {
+	data := am.Data
+	start := 0
+	end := 0
+
+	if start = strings.Index(data, "syscall="); start < 0 {
+		return
+	}
+
+	// Progress the start point beyond the = sign
+	start += 8
+	if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
+		// There was no ending space, maybe the syscall id is at the end of the line
+		end = len(data) - start
+
+		// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a syscall id
+		if end > 5 {
+			return
+		}
+	}
+
+	amg.Syscall = data[start : start+end]
+}
+
 // Gets a username for a user id
 func getUsername(uid string) string {
 	uname := "UNKNOWN_USER"
 
-	//Make sure we have a uid element to work with.
-	//Give a default value in case we don't find something.
+	// Make sure we have a uid element to work with.
+	// Give a default value in case we don't find something.
 	if lUser, ok := uidMap[uid]; ok {
-		uname = lUser.Username
+		uname = lUser
 	} else {
 		lUser, err := user.LookupId(uid)
 		if err == nil {
 			uname = lUser.Username
-			uidMap[uid] = *lUser
-		} else {
-			uidMap[uid] = user.User{Username: uname}
 		}
+		uidMap[uid] = uname
 	}
 
 	return uname
