@@ -41,19 +41,19 @@ func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int, 
 		trackMessages: trackMessages,
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
-		filters: make(map[string]map[uint16][]*regexp.Regexp),
+		filters:       make(map[string]map[uint16][]*regexp.Regexp),
 	}
 
-   for _, filter := range filters {
-       if _, ok := am.filters[filter.syscall]; !ok {
-           am.filters[filter.syscall] = make(map[uint16][]*regexp.Regexp)
-       }
+	for _, filter := range filters {
+		if _, ok := am.filters[filter.syscall]; !ok {
+			am.filters[filter.syscall] = make(map[uint16][]*regexp.Regexp)
+		}
 
-	   if _, ok := am.filters[filter.syscall][filter.messageType]; !ok {
-		   am.filters[filter.syscall][filter.messageType] = []*regexp.Regexp{}
-	   }
+		if _, ok := am.filters[filter.syscall][filter.messageType]; !ok {
+			am.filters[filter.syscall][filter.messageType] = []*regexp.Regexp{}
+		}
 
-	   am.filters[filter.syscall][filter.messageType] = append(am.filters[filter.syscall][filter.messageType], filter.regex)
+		am.filters[filter.syscall][filter.messageType] = append(am.filters[filter.syscall][filter.messageType], filter.regex)
 	}
 
 	return &am

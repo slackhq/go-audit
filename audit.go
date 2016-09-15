@@ -11,9 +11,9 @@ import (
 	"log/syslog"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 )
 
 var l = log.New(os.Stdout, "", 0)
