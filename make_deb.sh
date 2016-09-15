@@ -11,6 +11,7 @@ DIRNAME="$(cd "$(dirname "$0")" && pwd)"
 OLDESTPWD="$PWD"
 
 go build
+rm -f "$PWD/rootfs"
 mkdir -p "$PWD/rootfs/usr/local/bin"
 mv "$PWD/go-audit" "$PWD/rootfs/usr/local/bin/"
 
