@@ -11,7 +11,9 @@ import (
 	"log/syslog"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"regexp"
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -88,6 +90,77 @@ func createOutput(config *viper.Viper) *AuditWriter {
 	return NewAuditWriter(syslogWriter, attempts)
 }
 
+func createFilters(config *viper.Viper) []AuditFilter {
+	var err error
+	var ok bool
+
+	fs := config.Get("filters")
+	filters := []AuditFilter{}
+
+	if fs == nil {
+		return filters
+	}
+
+	ft, ok := fs.([]interface{})
+	if !ok {
+		return filters
+	}
+
+	for i, f := range ft {
+		f2, ok := f.(map[interface{}]interface{})
+		if !ok {
+			el.Fatal("Could not parse filter ", i+1, f)
+		}
+
+		af := AuditFilter{}
+		for k, v := range f2 {
+			switch k {
+			case "message_type":
+				if ev, ok := v.(string); ok {
+					fv, err := strconv.ParseUint(ev, 10, 64)
+					if err != nil {
+						el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v, " ", err)
+					}
+					af.messageType = uint16(fv)
+
+				} else if ev, ok := v.(int); ok {
+					if !ok {
+						el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v)
+					}
+					af.messageType = uint16(ev)
+
+				} else {
+					el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v)
+				}
+
+			case "regex":
+				re, ok := v.(string)
+				if !ok {
+					el.Fatal("`regex` in filter ", i+1, " could not be parsed ", v)
+				}
+
+				if af.regex, err = regexp.Compile(re); err != nil {
+					el.Fatal("`regex` in filter ", i+1, " could not be parsed ", v, " ", err)
+				}
+
+			case "syscall":
+				if af.syscall, ok = v.(string); ok {
+					el.Fatal("`syscall` in filter ", i+1, " could not be parsed ", v)
+				} else if ev, ok := v.(int); ok {
+					af.syscall = strconv.Itoa(ev)
+				} else {
+					el.Fatal("`syscall` in filter ", i+1, " could not be parsed ", v)
+				}
+			}
+		}
+
+		filters = append(filters, af)
+		l.Printf("Ignoring  syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
+	}
+
+	return filters
+}
+
 func main() {
 	config := viper.New()
 	configFile := flag.String("config", "", "Config file location")
@@ -125,6 +198,7 @@ func main() {
 		config.GetBool("message_tracking.enabled"),
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
+		createFilters(config),
 	)
 
 	l.Println("Started processing events")

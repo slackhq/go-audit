@@ -31,6 +31,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
+	Syscall       string            `json:"-"`
 }
 
 // Creates a new message group from the details parsed from the message
@@ -86,8 +87,11 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307:
+	case 1309, 1307, 1306:
 		// Don't map uids here
+	case 1300:
+		amg.findSyscall(am)
+		amg.mapUids(am)
 	default:
 		amg.mapUids(am)
 	}
@@ -132,6 +136,30 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 		data = data[next:]
 	}
 
+}
+
+func (amg *AuditMessageGroup) findSyscall(am *AuditMessage) {
+	data := am.Data
+	start := 0
+	end := 0
+
+	if start = strings.Index(data, "syscall="); start < 0 {
+		return
+	}
+
+	// Progress the start point beyond the = sign
+	start += 8
+	if end = strings.IndexByte(data[start:], " "[0]); end < 0 {
+		// There was no ending space, maybe the syscall id is at the end of the line
+		end = len(data) - start
+
+		// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a syscall id
+		if end > 5 {
+			return
+		}
+	}
+
+	amg.Syscall = data[start : start+end]
 }
 
 // Gets a username for a user id
