@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
-	"os/user"
 	"syscall"
 	"testing"
 	"time"
@@ -35,9 +34,9 @@ func TestNewAuditMessage(t *testing.T) {
 }
 
 func TestAuditMessageGroup_AddMessage(t *testing.T) {
-	uidMap = make(map[string]user.User, 0)
-	uidMap["0"] = user.User{Username: "hi"}
-	uidMap["1"] = user.User{Username: "nope"}
+	uidMap = make(map[string]string, 0)
+	uidMap["0"] = "hi"
+	uidMap["1"] = "nope"
 
 	amg := &AuditMessageGroup{
 		Seq:           1,
@@ -77,7 +76,7 @@ func TestAuditMessageGroup_AddMessage(t *testing.T) {
 }
 
 func TestNewAuditMessageGroup(t *testing.T) {
-	uidMap = make(map[string]user.User, 0)
+	uidMap = make(map[string]string, 0)
 	m := &AuditMessage{
 		Type:      uint16(1300),
 		Seq:       1019,
@@ -96,7 +95,7 @@ func TestNewAuditMessageGroup(t *testing.T) {
 }
 
 func Test_getUsername(t *testing.T) {
-	uidMap = make(map[string]user.User, 0)
+	uidMap = make(map[string]string, 0)
 	assert.Equal(t, "root", getUsername("0"), "0 should be root you animal")
 	assert.Equal(t, "UNKNOWN_USER", getUsername("-1"), "Expected UNKNOWN_USER")
 
@@ -104,22 +103,22 @@ func Test_getUsername(t *testing.T) {
 	if !ok {
 		t.Fatal("Expected the uid mapping to be cached")
 	}
-	assert.Equal(t, "root", val.Username)
+	assert.Equal(t, "root", val)
 
 	val, ok = uidMap["-1"]
 	if !ok {
 		t.Fatal("Expected the uid mapping to be cached")
 	}
-	assert.Equal(t, "UNKNOWN_USER", val.Username)
+	assert.Equal(t, "UNKNOWN_USER", val)
 }
 
 func TestAuditMessageGroup_mapUids(t *testing.T) {
-	uidMap = make(map[string]user.User, 0)
-	uidMap["0"] = user.User{Username: "hi"}
-	uidMap["1"] = user.User{Username: "there"}
-	uidMap["2"] = user.User{Username: "fun"}
-	uidMap["3"] = user.User{Username: "test"}
-	uidMap["99999"] = user.User{Username: "derp"}
+	uidMap = make(map[string]string, 0)
+	uidMap["0"] = "hi"
+	uidMap["1"] = "there"
+	uidMap["2"] = "fun"
+	uidMap["3"] = "test"
+	uidMap["99999"] = "derp"
 
 	amg := &AuditMessageGroup{
 		Seq:           1,

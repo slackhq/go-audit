@@ -63,7 +63,7 @@ func Test_main(t *testing.T) {
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
-	marshaller := NewAuditMarshaller(NewAuditWriter(&noopWriter{}, 1), false, false, 1)
+	marshaller := NewAuditMarshaller(NewAuditWriter(&noopWriter{}, 1), false, false, 1, []AuditFilter{})
 
 	data := make([][]byte, 6)
 
