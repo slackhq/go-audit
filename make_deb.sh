@@ -2,7 +2,7 @@
 
 # depends on `fpm`, install via `gem`
 
-VERSION="0.15.0"
+VERSION="0.16.0"
 BUILD="slack1"
 CONTACT="Jane Doe <janed@example.com>"
 PACKAGE_NAME="go-audit"
