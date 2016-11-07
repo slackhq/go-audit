@@ -1,0 +1,3 @@
+# /etc/elasticsearch/elasticsearch.yml
+network.host: [ _site_, _local_ ]
+node.name: ${HOSTNAME}

@@ -1,5 +1,6 @@
 go-audit
 go-audit.yaml
+!examples/**
 *.pprof
 *.test
 *.deb

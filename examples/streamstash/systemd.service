@@ -1,0 +1,14 @@
+# /etc/systemd/system/streamstash.service
+[Unit]
+Description = streamstash
+After=network.target
+
+[Service]
+Type = simple
+# You may have to tweak the path to streamstash here
+ExecStart = /usr/local/lib/node_modules/streamstash/bin/streamstash /etc/streamstash.js
+User=nobody
+Group=nogroup
+
+[Install]
+WantedBy = multi-user.target
