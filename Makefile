@@ -1,4 +1,9 @@
+bin:
+	govendor sync
+	go build
+
 test:
+	govendor sync
 	go test -v
 
 test-cov-html:
@@ -16,4 +21,5 @@ bench-cpu-long:
 	go test -bench=. -benchtime=60s -cpuprofile=cpu.pprof
 	go tool pprof go-audit.test cpu.pprof
 
-.PHONY: test test-cov-html bench bench-cpu bench-cpu-long
+.PHONY: test test-cov-html bench bench-cpu bench-cpu-long bin
+.DEFAULT_GOAL := bin
