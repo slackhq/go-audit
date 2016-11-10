@@ -1,5 +1,8 @@
 # go-audit
 
+[![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
+[![Build Status](https://img.shields.io/travis/slackhq/go-audit.svg?style=flat-square)](https://travis-ci.org/slackhq/go-audit)
+
 ## About
 
 go-audit is an alternative to the auditd daemon that ships with many distros.
