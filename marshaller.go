@@ -61,7 +61,6 @@ func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int, 
 
 // Ingests a netlink message and likely prepares it to be logged
 func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
-	//TODO: currently message completion requires the canary, make the client shoot noop messages occasionally to flush this
 	aMsg := NewAuditMessage(nlMsg)
 
 	if aMsg.Seq == 0 {

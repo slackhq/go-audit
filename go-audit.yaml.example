@@ -4,10 +4,6 @@
 # Hopefully this problem with viper goes away soon                                      #
 #########################################################################################
 
-# Reads /proc/net/netlink every 5 seconds
-# you should set a file watch rule to pick the file access `-w /proc/net/netlink -p war -k netlink-file`
-canary: true
-
 # Configure socket buffers, leave unset to use the system defaults
 # Values will be doubled by the kernel
 # It is recommended you do not set any of these values unless you really need to

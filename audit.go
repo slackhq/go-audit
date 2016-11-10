@@ -20,7 +20,6 @@ var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
 
 func loadConfig(config *viper.Viper) {
-	config.SetDefault("canary", true)
 	config.SetDefault("message_tracking.enabled", true)
 	config.SetDefault("message_tracking.log_out_of_order", false)
 	config.SetDefault("message_tracking.max_out_of_order", 500)
@@ -179,10 +178,6 @@ func main() {
 
 	l.SetFlags(config.GetInt("log.flags"))
 	el.SetFlags(config.GetInt("log.flags"))
-
-	if config.GetBool("canary") {
-		go canaryRead()
-	}
 
 	setRules(config)
 

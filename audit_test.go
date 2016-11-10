@@ -17,7 +17,6 @@ func Test_loadConfig(t *testing.T) {
 
 	config.SetConfigFile(file)
 	loadConfig(config)
-	assert.Equal(t, true, config.GetBool("canary"), "canary should default to true")
 	assert.Equal(t, true, config.GetBool("message_tracking.enabled"), "message_tracking.enabled should default to true")
 	assert.Equal(t, false, config.GetBool("message_tracking.log_out_of_order"), "message_tracking.log_out_of_order should default to false")
 	assert.Equal(t, 500, config.GetInt("message_tracking.max_out_of_order"), "message_tracking.max_out_of_order should default to 500")
