@@ -44,7 +44,7 @@ I became interested in creating a replacement for the existing daemon.
 - `make test-cov-html` - run the unit tests and open up the code coverage results
 - `make bench` - run the benchmark test suite
 - `make bench-cpu` - run the benchmark test suite with cpu profiling
-- `make bench-cpu0long` - run the benchmark test suite with cpu profiling and try to get some gc collection
+- `make bench-cpulong` - run the benchmark test suite with cpu profiling and try to get some gc collection
 
 ##### Running as a service
  
