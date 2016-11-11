@@ -1,0 +1,18 @@
+# /opt/elastalert_rules/run_uptime.yaml
+name: go-audit run uptime
+index: streamstash-%Y.%m.%d
+use_strftime_index: true
+type: any
+filter:
+- query:
+    query_string:
+      query: go-audit.execve.command:uptime
+# write alerts to /tmp/alerts for debugging purposes
+alert:
+- command
+pipe_match_json: true
+command: ["/usr/bin/tee", "-a", "/tmp/alerts"]
+# Enable email alerts:
+#alert:
+#- email
+#email: YOUR-EMAIL@SOMEWHERE.COM

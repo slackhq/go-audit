@@ -1,0 +1,41 @@
+{
+    "template": "streamstash-*",
+    "mappings": {
+        "_default_": {
+            "dynamic_templates": [
+                {
+                    "message_field": {
+                        "mapping": {
+                            "index": "analyzed",
+                            "omit_norms": true,
+                            "type": "string"
+                        },
+                        "match_mapping_type": "string",
+                        "match": "message"
+                    }
+                },
+                {
+                    "string_fields": {
+                        "mapping": {
+                            "index": "analyzed",
+                            "omit_norms": true,
+                            "type": "string",
+                            "fields": {
+                                "raw": {
+                                    "index": "not_analyzed",
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "match_mapping_type": "string",
+                        "match": "*"
+                    }
+                }
+            ],
+            "_all": {
+                "omit_norms": true,
+                "enabled": true
+            }
+        }
+    }
+}

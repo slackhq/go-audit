@@ -1,0 +1,43 @@
+# /etc/go-audit.yaml
+
+canary: true
+
+# use /var/run/go-audit.sock to write events
+output:
+  syslog:
+    attempts: 15
+    enabled: true
+    network: unix
+    address: /var/run/go-audit.sock
+    priority: 132
+    tag: go-audit
+
+# log an event when we believe a message has been lost
+message_tracking:
+  enabled: true
+  log_out_of_order: false
+  max_out_of_order: 500
+
+rules:
+  - -b 1024
+  # required if you set canary: true
+  - -w /proc/net/netlink -p war -k netlink-file
+  # watch interesting network events
+  - -a exit,always -S connect
+  - -a exit,always -S listen
+  # watch execve for everything that has an auid set (ignores things like cron)
+  - -a exit,always -F arch=b64 -F auid!=-1 -S execve -k user_commands
+  - -a exit,always -F arch=b32 -F auid!=-1 -S execve -k user_commands
+  # failure to access file because of perms
+  - -a always,exit -F arch=b32 -S open -S openat -F exit=-EACCES -k access
+  - -a always,exit -F arch=b64 -S open -S openat -F exit=-EACCES -k access
+  - -a always,exit -F arch=b32 -S open -S openat -F exit=-EPERM -k access
+  - -a always,exit -F arch=b64 -S open -S openat -F exit=-EPERM -k access
+
+filters:
+  # reduce the number of connect syscall events being logged
+  - syscall: 42
+    message_type: 1306
+    # 0200....7F - ipv4 on any port to 127.x.x.x
+    # 01 - local/unix domain sockets
+    regex: saddr=(0200....7F|01)

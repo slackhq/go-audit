@@ -1,0 +1,11 @@
+# /etc/systemd/system/elastalert.service
+[Unit]
+Description = elastalert
+After=network.target
+
+[Service]
+Type = simple
+ExecStart = /usr/local/bin/elastalert --config /etc/elastalert.yaml
+
+[Install]
+WantedBy = multi-user.target
