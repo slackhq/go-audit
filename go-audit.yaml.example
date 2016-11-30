@@ -23,8 +23,10 @@ message_tracking:
   # Maximum out of orderness before a missed sequence is presumed dropped, default 500
   max_out_of_order: 500
 
-# Configure where to output audit events to
+# Configure where to output audit events
+# Only 1 output can be active at a given time
 output:
+  # Writes logs to syslog
   syslog:
     enabled: true
 
@@ -48,6 +50,25 @@ output:
     # Typically the name of the program generating the message. The PID is of the process is appended for you: [1233]
     # Default value is "go-audit"
     tag: "audit-thing"
+
+  # Appends logs to a file
+  file:
+    enabled: false
+
+    # Total number of attempts to write a line before considering giving up
+    # If a write fails go-audit will sleep for 1 second before retrying
+    attempts: 2
+
+    # Path of the file to write lines to
+    # The actual file will be created if it is missing but make sure the parent directory exists
+    path: /tmp/go-audit.log
+
+    # Octal file mode for the log file, make sure to always have a leading 0
+    mode: 0600
+
+    # User and group that should own the log file
+    user: nobody
+    group: nogroup
 
 # Configure logging, only stdout and stderr are used.
 log:
