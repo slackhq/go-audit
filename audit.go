@@ -1,16 +1,16 @@
-//There is one rule here. "thou shall not block"
-//Slack Technologies, Inc 2015
-//Ryan Huber
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"strconv"
 	"strings"
@@ -65,14 +65,44 @@ func setRules(config *viper.Viper) {
 	}
 }
 
-func createOutput(config *viper.Viper) *AuditWriter {
-	if config.GetBool("output.syslog.enabled") == false {
-		el.Fatalln("No outputs have been enabled")
+func createOutput(config *viper.Viper) (*AuditWriter, error) {
+	var writer *AuditWriter
+	var err error
+	i := 0
+
+	if config.GetBool("output.syslog.enabled") == true {
+		i++
+		writer, err = createSyslogOutput(config)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	if config.GetBool("output.file.enabled") == true {
+		i++
+		writer, err = createFileOutput(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if i > 1 {
+		return nil, errors.New("Only one output can be enabled at a time")
+	}
+
+	if writer == nil {
+		return nil, errors.New("No outputs were configured")
+	}
+
+	return writer, nil
+}
+
+func createSyslogOutput(config *viper.Viper) (*AuditWriter, error) {
 	attempts := config.GetInt("output.syslog.attempts")
 	if attempts < 1 {
-		el.Fatalln("output attempts for syslog must be at least 1", attempts, "provided")
+		return nil, errors.New(
+			fmt.Sprintf("Output attempts for syslog must be at least 1, %v provided", attempts),
+		)
 	}
 
 	syslogWriter, err := syslog.Dial(
@@ -83,10 +113,65 @@ func createOutput(config *viper.Viper) *AuditWriter {
 	)
 
 	if err != nil {
-		el.Fatalln("Failed to open syslog writer. Error:", err)
+		return nil, errors.New(fmt.Sprintf("Failed to open syslog writer. Error: %v", err))
 	}
 
-	return NewAuditWriter(syslogWriter, attempts)
+	return NewAuditWriter(syslogWriter, attempts), nil
+}
+
+func createFileOutput(config *viper.Viper) (*AuditWriter, error) {
+	attempts := config.GetInt("output.file.attempts")
+	if attempts < 1 {
+		return nil, errors.New(
+			fmt.Sprintf("Output attempts for file must be at least 1, %v provided", attempts),
+		)
+	}
+
+	mode := os.FileMode(config.GetInt("output.file.mode"))
+	if mode < 1 {
+		return nil, errors.New("Output file mode should be greater than 0000")
+	}
+
+	f, err := os.OpenFile(
+		config.GetString("output.file.path"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, mode,
+	)
+
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Failed to open output file. Error: %s", err))
+	}
+
+	if err := f.Chmod(mode); err != nil {
+		return nil, errors.New(fmt.Sprintf("Failed to set file permissions. Error: %s", err))
+	}
+
+	uname := config.GetString("output.file.user")
+	u, err := user.Lookup(uname)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Could not find uid for user %s. Error: %s", uname, err))
+	}
+
+	gname := config.GetString("output.file.group")
+	g, err := user.LookupGroup(gname)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Could not find gid for group %s. Error: %s", gname, err))
+	}
+
+	uid, err := strconv.ParseInt(u.Uid, 10, 32)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Found uid could not be parsed. Error: %s", err))
+	}
+
+	gid, err := strconv.ParseInt(g.Gid, 10, 32)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Found gid could not be parsed. Error: %s", err))
+	}
+
+	if err = f.Chown(int(uid), int(gid)); err != nil {
+		return nil, errors.New(fmt.Sprintf("Could not chown output file. Error: %s", err))
+	}
+
+	return NewAuditWriter(f, attempts), nil
 }
 
 func createFilters(config *viper.Viper) []AuditFilter {
@@ -186,7 +271,11 @@ func main() {
 		defer profile.Start(profile.Quiet, profile.ProfilePath(".")).Stop()
 	}
 
-	writer := createOutput(config)
+	writer, err := createOutput(config)
+	if err != nil {
+		el.Fatal(err)
+	}
+
 	nlClient := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
 	marshaller := NewAuditMarshaller(
 		writer,
