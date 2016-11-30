@@ -6,7 +6,7 @@
 ## About
 
 go-audit is an alternative to the auditd daemon that ships with many distros.
-After having created an [auditd audisp](https://people.redhat.com/sgrubb/audit/) plugin to convert audit logs to json, 
+After having created an [auditd audisp](https://people.redhat.com/sgrubb/audit/) plugin to convert audit logs to json,
 I became interested in creating a replacement for the existing daemon.
 
 ##### Goals
@@ -21,18 +21,18 @@ I became interested in creating a replacement for the existing daemon.
 
 ##### Installation
 
-1. Install [golang](https://golang.org/doc/install)
+1. Install [golang](https://golang.org/doc/install) > 1.2.1
 2. Install [`govendor`](https://github.com/kardianos/govendor) if you haven't already
 
     ```go get -u github.com/kardianos/govendor```
-    
+
 2. Clone the repo
 
     ```
     git clone (this repo)
     cd go-audit
     ```
-    
+
 2. Build the binary
 
     ```
@@ -50,10 +50,10 @@ I became interested in creating a replacement for the existing daemon.
 - `make bench-cpulong` - run the benchmark test suite with cpu profiling and try to get some gc collection
 
 ##### Running as a service
- 
+
 Check the [contrib](contrib) folder, it contains examples for how to run `go-audit` as a proper service on your machine.
 
-##### Example Config 
+##### Example Config
 
 See [go-audit.yaml.example](go-audit.yaml.example)
 
@@ -116,6 +116,10 @@ Wikipedia has a pretty good [page](https://en.wikipedia.org/wiki/Syslog) on this
 | **local5 (21)**   | 168      | 169       | 170       | 171     | 172      | 173        | 174       | 175       |
 | **local6 (22)**   | 176      | 177       | 178       | 179     | 180      | 181        | 182       | 183       |
 | **local7 (23)**   | 184      | 185       | 186       | 187     | 188      | 189        | 190       | 191       |
+
+#### I'm getting a bunch of compilation errors related to syscall_solaris.go after running make
+
+You may be running an older version of Go (1.2.1 or below). Update to at least 1.5 to resolve these errors.
 
 ## Thanks!
 
