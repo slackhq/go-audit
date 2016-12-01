@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+
+var StreamStash = require('streamstash')
+
+var logger = new StreamStash.Logger({ level: 0 }),
+    streamStash = new StreamStash({ logger: logger })
+
+process.stdin.on('end', function () {
+    process.exit(0)
+})
+
+streamStash.addInputPlugin(new StreamStash.inputs.StdInInput(
+    {
+        streamStash: streamStash,
+        EventContainer: StreamStash.EventContainer,
+        logger: logger
+    }
+))
+
+streamStash.addOutputPlugin(new StreamStash.outputs.StdOutOutput(
+    {
+        streamStash: streamStash,
+        logger: logger
+    }
+))
+
+streamStash.addFilter(function (event) {
+    StreamStash.parsers.goAuditParser(event)
+
+    delete event.data['event_source']
+    delete event.data['_type']
+
+    event.next()
+})
+
+streamStash.start()

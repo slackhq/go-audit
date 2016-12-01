@@ -1,0 +1,9 @@
+{
+    "name": "line-parser",
+    "description": "Parses go-audit lines from stdin, parses, and outputs on stdout",
+    "license": "MIT",
+    "version": "1.0.0",
+    "dependencies": {
+        "streamstash": "https://github.com/nbrownus/streamstash#2.0"
+    }
+}
