@@ -5,3 +5,4 @@ go-audit.yaml
 *.test
 *.deb
 *.out
+node_modules
