@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# go-audit
+#
+# chkconfig:   - 15 85
+# description:  go-audit is an alternative to the auditd daemon that \
+#               ships with many distros.
+# processname: go-audit
+# config:      /etc/go-audit.yaml
+# pidfile:     /var/run/go-audit.pid
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+exec="/usr/local/bin/go-audit"
+prog=$(basename $exec)
+pidfile=/var/run/${prog}.pid
+
+CONFIG_FILE="/etc/go-audit.yaml"
+LOG_DIRECTORY="/var/log/go-audit"
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+start() {
+    [ -f $pidfile ] && checkpid $(cat $pidfile) && echo "$prog already running" && return
+
+    echo -n $"Starting $prog: "
+    nohup $exec --config $CONFIG_FILE >>${LOG_DIRECTORY}/go-audit.out 2>>${LOG_DIRECTORY}/go-audit.err </dev/null &
+    pid=$!
+    echo $pid >$pidfile
+
+    sleep 0.1  # Sleep briefly to see if the process ends immediately
+    checkpid $(cat $pidfile)
+    status=$?
+    if [ $status -eq 0 ]; then success; else failure; fi
+    echo
+    return $status
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc -p $pidfile $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $pidfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+rh_status() {
+    status -p $pidfile $prog
+}
+
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        rh_status
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart}"
+        exit 2
+esac
