@@ -21,7 +21,7 @@ I became interested in creating a replacement for the existing daemon.
 
 ##### Installation
 
-1. Install [golang](https://golang.org/doc/install)
+1. Install [golang](https://golang.org/doc/install), version 1.7 or greater is required
 2. Install [`govendor`](https://github.com/kardianos/govendor) if you haven't already
 
     ```go get -u github.com/kardianos/govendor```
