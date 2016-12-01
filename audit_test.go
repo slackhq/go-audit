@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"syscall"
 	"testing"
+	"time"
 	"errors"
 )
 
@@ -313,6 +314,15 @@ func Test_createOutput(t *testing.T) {
 	assert.NotNil(t, w)
 	assert.IsType(t, &AuditWriter{}, w)
 	assert.IsType(t, &os.File{}, w.w)
+
+	// File rotation
+	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
+	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
+	assert.True(t, os.IsNotExist(err))
+	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+	time.Sleep(100 * time.Millisecond)
+	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
+	assert.Nil(t, err)
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
