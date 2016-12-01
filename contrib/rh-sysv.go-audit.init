@@ -12,7 +12,7 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-exec="/usr/bin/go-audit"
+exec="/usr/local/bin/go-audit"
 prog=$(basename $exec)
 pidfile=/var/run/${prog}.pid
 
