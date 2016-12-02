@@ -12,16 +12,15 @@ import (
 	"strconv"
 	"syscall"
 	"testing"
+	"errors"
 )
 
 func Test_loadConfig(t *testing.T) {
-	config := viper.New()
-
 	file := createTempFile(t, "defaultValues.test.yaml", "")
 	defer os.Remove(file)
 
-	config.SetConfigFile(file)
-	loadConfig(config)
+	// defaults
+	config, err := loadConfig(file)
 	assert.Equal(t, true, config.GetBool("message_tracking.enabled"), "message_tracking.enabled should default to true")
 	assert.Equal(t, false, config.GetBool("message_tracking.log_out_of_order"), "message_tracking.log_out_of_order should default to false")
 	assert.Equal(t, 500, config.GetInt("message_tracking.max_out_of_order"), "message_tracking.max_out_of_order should default to 500")
@@ -30,28 +29,70 @@ func Test_loadConfig(t *testing.T) {
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
 	assert.Equal(t, 3, config.GetInt("output.syslog.attempts"), "output.syslog.attempts should default to 3")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
+	assert.Equal(t, 0, l.Flags(), "stdout log flags was wrong")
+	assert.Equal(t, 0, el.Flags(), "stderr log flags was wrong")
+	assert.Nil(t, err)
 
-	//TODO: this doesn't work because loadConfig calls os.Exit
-	//lb, elb := hookLogger()
-	//defer resetLogger()
-	//
-	//file = createTempFile(t, "defaultValues.test.yaml", "this is bad")
-	//loadConfig(config, file)
-	//assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
-	//assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
-}
-
-func Test_loadConfig_fail(t *testing.T) {
-	//TODO: test that we exit if the config file doesn't exist or is poorly formed
-	t.Skip("Not implemented")
+	// parse error
+	file = createTempFile(t, "defaultValues.test.yaml", "this is bad")
+	config, err = loadConfig(file)
+	assert.EqualError(t, err, "While parsing config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `this is...` into map[string]interface {}")
+	assert.Nil(t, config)
 }
 
 func Test_setRules(t *testing.T) {
-	//TODO: Test rules are flushed first (success/fail)
-	//TODO: Test rules are added (success/fail)
-	//TODO: Test empty rule lines are skipped
-	//TODO: Test fatal if no rules
-	t.Skip("Not implemented")
+	defer resetLogger()
+
+	// fail to flush rules
+	config := viper.New()
+
+	err := setRules(config, func (s string, a ...string) error {
+		if s == "auditctl" && a[0] == "-D" {
+			return errors.New("testing")
+		}
+
+		return nil
+	})
+
+	assert.EqualError(t, err, "Failed to flush existing audit rules. Error: testing")
+
+	// fail on 0 rules
+	err = setRules(config, func (s string, a ...string) error { return nil })
+	assert.EqualError(t, err, "No audit rules found.")
+
+	// failure to set rule
+	r := 0
+	config.Set("rules", []string{"-a -1 -2", "", "-a -3 -4"})
+	err = setRules(config, func (s string, a ...string) error {
+		if a[0] != "-D" {
+			return errors.New("testing rule")
+		}
+
+		r++
+
+		return nil
+	})
+
+	assert.Equal(t, 1, r, "Wrong number of rule set attempts")
+	assert.EqualError(t, err, "Failed to add rule #1. Error: testing rule")
+
+	// properly set rules
+	r = 0
+	err = setRules(config, func (s string, a ...string) error {
+		// Skip the flush rules
+		if a[0] != "-a" {
+			return nil
+		}
+
+		if (a[1] == "-1" && a[2] == "-2") || (a[1] == "-3" && a[2] == "-4") {
+			r++
+		}
+
+		return nil
+	})
+
+	assert.Equal(t, 2, r, "Wrong number of correct rule set attempts")
+	assert.Nil(t, err)
 }
 
 func Test_createFileOutput(t *testing.T) {
