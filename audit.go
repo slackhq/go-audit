@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
@@ -19,7 +18,16 @@ import (
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
 
-func loadConfig(config *viper.Viper) {
+type executor func (string, ...string) error
+
+func lExec (s string, a ...string) error {
+	return exec.Command(s, a...).Run()
+}
+
+func loadConfig(configFile string) (*viper.Viper, error) {
+	config := viper.New()
+	config.SetConfigFile(configFile)
+
 	config.SetDefault("message_tracking.enabled", true)
 	config.SetDefault("message_tracking.log_out_of_order", false)
 	config.SetDefault("message_tracking.max_out_of_order", 500)
@@ -29,18 +37,20 @@ func loadConfig(config *viper.Viper) {
 	config.SetDefault("output.syslog.attempts", "3")
 	config.SetDefault("log.flags", 0)
 
-	err := config.ReadInConfig() // Find and read the config file
-	if err != nil {              // Handle errors reading the config file
-		el.Printf("Config file has an error: %s\n", err)
-		os.Exit(1)
+	if err := config.ReadInConfig(); err != nil {
+		return nil, err
 	}
+
+	l.SetFlags(config.GetInt("log.flags"))
+	el.SetFlags(config.GetInt("log.flags"))
+
+	return config, nil
 }
 
-func setRules(config *viper.Viper) {
+func setRules(config *viper.Viper, e executor) error {
 	// Clear existing rules
-	err := exec.Command("auditctl", "-D").Run()
-	if err != nil {
-		el.Fatalf("Failed to flush existing audit rules. Error: %s\n", err)
+	if err := e("auditctl", "-D"); err != nil {
+		return errors.New(fmt.Sprintf("Failed to flush existing audit rules. Error: %s", err))
 	}
 
 	l.Println("Flushed existing audit rules")
@@ -53,16 +63,17 @@ func setRules(config *viper.Viper) {
 				continue
 			}
 
-			err := exec.Command("auditctl", strings.Fields(v)...).Run()
-			if err != nil {
-				el.Fatalf("Failed to add rule #%d. Error: %s \n", i+1, err)
+			if err := e("auditctl", strings.Fields(v)...); err != nil {
+				return errors.New(fmt.Sprintf("Failed to add rule #%d. Error: %s", i+1, err))
 			}
 
 			l.Printf("Added audit rule #%d\n", i+1)
 		}
 	} else {
-		el.Fatalln("No audit rules found. exiting")
+		return errors.New("No audit rules found.")
 	}
+
+	return nil
 }
 
 func createOutput(config *viper.Viper) (*AuditWriter, error) {
@@ -246,9 +257,7 @@ func createFilters(config *viper.Viper) []AuditFilter {
 }
 
 func main() {
-	config := viper.New()
 	configFile := flag.String("config", "", "Config file location")
-	cpuProfile := flag.Bool("cpuprofile", false, "Enable cpu profiling")
 
 	flag.Parse()
 
@@ -258,17 +267,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	config.SetConfigFile(*configFile)
-	loadConfig(config)
+	config, err := loadConfig(*configFile)
+	if err != nil {
+		el.Fatal(err)
+	}
 
-	l.SetFlags(config.GetInt("log.flags"))
-	el.SetFlags(config.GetInt("log.flags"))
-
-	setRules(config)
-
-	if *cpuProfile {
-		l.Println("Enabling CPU profile ./cpu.pprof")
-		defer profile.Start(profile.Quiet, profile.ProfilePath(".")).Stop()
+	if err := setRules(config, lExec); err != nil {
+		el.Fatal(err)
 	}
 
 	writer, err := createOutput(config)
