@@ -97,6 +97,14 @@ func createOutput(config *viper.Viper) (*AuditWriter, error) {
 		}
 	}
 
+	if config.GetBool("output.stdout.enabled") == true {
+		i++
+		writer, err = createStdOutOutput(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if i > 1 {
 		return nil, errors.New("Only one output can be enabled at a time")
 	}
@@ -183,6 +191,20 @@ func createFileOutput(config *viper.Viper) (*AuditWriter, error) {
 	}
 
 	return NewAuditWriter(f, attempts), nil
+}
+
+func createStdOutOutput(config *viper.Viper) (*AuditWriter, error) {
+	attempts := config.GetInt("output.stdout.attempts")
+	if attempts < 1 {
+		return nil, errors.New(
+			fmt.Sprintf("Output attempts for stdout must be at least 1, %v provided", attempts),
+		)
+	}
+
+	// l logger is no longer stdout
+	l.SetOutput(os.Stderr)
+
+	return NewAuditWriter(os.Stdout, attempts), nil
 }
 
 func createFilters(config *viper.Viper) []AuditFilter {
@@ -272,12 +294,13 @@ func main() {
 		el.Fatal(err)
 	}
 
-	if err := setRules(config, lExec); err != nil {
+	// output needs to be created before anything that write to stdout
+	writer, err := createOutput(config)
+	if err != nil {
 		el.Fatal(err)
 	}
 
-	writer, err := createOutput(config)
-	if err != nil {
+	if err := setRules(config, lExec); err != nil {
 		el.Fatal(err)
 	}
 

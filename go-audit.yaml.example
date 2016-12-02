@@ -26,13 +26,19 @@ message_tracking:
 # Configure where to output audit events
 # Only 1 output can be active at a given time
 output:
-  # Writes logs to syslog
-  syslog:
+  # Writes to stdout
+  # All program status logging will be moved to stderr
+  stdout:
     enabled: true
 
-    # Total number of attempts to send a message before considering the syslog server gone
+    # Total number of attempts to write a line before considering giving up
     # If a write fails go-audit will sleep for 1 second before retrying
-    # default is 3
+    # Default is 3
+    attempts: 2
+
+  # Writes logs to syslog
+  syslog:
+    enabled: false
     attempts: 5
 
     # Configure the type of socket this should be, default is unixgram
@@ -54,9 +60,6 @@ output:
   # Appends logs to a file
   file:
     enabled: false
-
-    # Total number of attempts to write a line before considering giving up
-    # If a write fails go-audit will sleep for 1 second before retrying
     attempts: 2
 
     # Path of the file to write lines to
