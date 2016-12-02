@@ -70,6 +70,15 @@ output:
     user: nobody
     group: nogroup
 
+  # Writes to stdout
+  # All program status logging will be moved to stderr
+  stdout:
+    enabled: true
+
+    # Total number of attempts to write a line before considering giving up
+    # If a write fails go-audit will sleep for 1 second before retrying
+    attempts: 2
+
 # Configure logging, only stdout and stderr are used.
 log:
   # Gives you a bit of control over log line prefixes. Default is 0 - nothing.
