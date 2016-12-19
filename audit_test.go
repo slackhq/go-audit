@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 	"syscall"
 	"testing"
-	"errors"
 )
 
 func Test_loadConfig(t *testing.T) {
@@ -46,7 +46,7 @@ func Test_setRules(t *testing.T) {
 	// fail to flush rules
 	config := viper.New()
 
-	err := setRules(config, func (s string, a ...string) error {
+	err := setRules(config, func(s string, a ...string) error {
 		if s == "auditctl" && a[0] == "-D" {
 			return errors.New("testing")
 		}
@@ -57,13 +57,13 @@ func Test_setRules(t *testing.T) {
 	assert.EqualError(t, err, "Failed to flush existing audit rules. Error: testing")
 
 	// fail on 0 rules
-	err = setRules(config, func (s string, a ...string) error { return nil })
+	err = setRules(config, func(s string, a ...string) error { return nil })
 	assert.EqualError(t, err, "No audit rules found.")
 
 	// failure to set rule
 	r := 0
 	config.Set("rules", []string{"-a -1 -2", "", "-a -3 -4"})
-	err = setRules(config, func (s string, a ...string) error {
+	err = setRules(config, func(s string, a ...string) error {
 		if a[0] != "-D" {
 			return errors.New("testing rule")
 		}
@@ -78,7 +78,7 @@ func Test_setRules(t *testing.T) {
 
 	// properly set rules
 	r = 0
-	err = setRules(config, func (s string, a ...string) error {
+	err = setRules(config, func(s string, a ...string) error {
 		// Skip the flush rules
 		if a[0] != "-a" {
 			return nil
