@@ -135,8 +135,8 @@ func Test_createFileOutput(t *testing.T) {
 	g, _ := user.LookupGroupId(strconv.Itoa(gid))
 
 	// travis-ci is silly
-	if u.Name == "" {
-		u.Name = g.Name
+	if u.Username == "" {
+		u.Username = g.Name
 	}
 
 	// gid error
@@ -144,7 +144,7 @@ func Test_createFileOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	w, err = createFileOutput(c)
 	assert.EqualError(t, err, "Could not find gid for group . Error: group: unknown group ")
 	assert.Nil(t, w)
@@ -165,7 +165,7 @@ func Test_createFileOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 	w, err = createFileOutput(c)
 	assert.Nil(t, err)
@@ -238,8 +238,8 @@ func Test_createOutput(t *testing.T) {
 	g, _ := user.LookupGroupId(strconv.Itoa(gid))
 
 	// travis-ci is silly
-	if u.Name == "" {
-		u.Name = g.Name
+	if u.Username == "" {
+		u.Username = g.Name
 	}
 
 	l, err := net.Listen("tcp", ":0")
@@ -259,7 +259,7 @@ func Test_createOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 
 	w, err = createOutput(c)
@@ -306,7 +306,7 @@ func Test_createOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 	w, err = createOutput(c)
 	assert.Nil(t, err)
