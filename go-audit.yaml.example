@@ -64,14 +64,14 @@ output:
 
     # Path of the file to write lines to
     # The actual file will be created if it is missing but make sure the parent directory exists
-    path: /tmp/go-audit.log
+    path: /var/log/go-audit/go-audit.log
 
     # Octal file mode for the log file, make sure to always have a leading 0
     mode: 0600
 
     # User and group that should own the log file
-    user: nobody
-    group: nogroup
+    user: root
+    group: root
 
 # Configure logging, only stdout and stderr are used.
 log:

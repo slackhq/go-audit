@@ -9,10 +9,12 @@ import (
 	"log/syslog"
 	"os"
 	"os/exec"
+	"os/signal"
 	"os/user"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -95,6 +97,8 @@ func createOutput(config *viper.Viper) (*AuditWriter, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		go handleLogRotation(config, writer)
 	}
 
 	if config.GetBool("output.stdout.enabled") == true {
@@ -191,6 +195,29 @@ func createFileOutput(config *viper.Viper) (*AuditWriter, error) {
 	}
 
 	return NewAuditWriter(f, attempts), nil
+}
+
+func handleLogRotation(config *viper.Viper, writer *AuditWriter) {
+	// Re-open our log file. This is triggered by a USR1 signal and is meant to be used upon log rotation
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGUSR1)
+
+	for _ = range sigc {
+		newWriter, err := createFileOutput(config)
+		if err != nil {
+			el.Fatalln("Error re-opening log file. Exiting.")
+		}
+
+		oldFile := writer.w.(*os.File)
+		writer.w = newWriter.w
+		writer.e = newWriter.e
+
+		err = oldFile.Close()
+		if err != nil {
+			el.Printf("Error closing old log file: %+v\n", err)
+		}
+	}
 }
 
 func createStdOutOutput(config *viper.Viper) (*AuditWriter, error) {
