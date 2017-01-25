@@ -20,9 +20,9 @@ import (
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
 
-type executor func (string, ...string) error
+type executor func(string, ...string) error
 
-func lExec (s string, a ...string) error {
+func lExec(s string, a ...string) error {
 	return exec.Command(s, a...).Run()
 }
 
@@ -289,7 +289,7 @@ func createFilters(config *viper.Viper) []AuditFilter {
 
 			case "syscall":
 				if af.syscall, ok = v.(string); ok {
-					el.Fatal("`syscall` in filter ", i+1, " could not be parsed ", v)
+					// All is good
 				} else if ev, ok := v.(int); ok {
 					af.syscall = strconv.Itoa(ev)
 				} else {

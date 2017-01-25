@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -13,7 +14,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-	"errors"
 )
 
 func Test_loadConfig(t *testing.T) {
@@ -47,7 +47,7 @@ func Test_setRules(t *testing.T) {
 	// fail to flush rules
 	config := viper.New()
 
-	err := setRules(config, func (s string, a ...string) error {
+	err := setRules(config, func(s string, a ...string) error {
 		if s == "auditctl" && a[0] == "-D" {
 			return errors.New("testing")
 		}
@@ -58,13 +58,13 @@ func Test_setRules(t *testing.T) {
 	assert.EqualError(t, err, "Failed to flush existing audit rules. Error: testing")
 
 	// fail on 0 rules
-	err = setRules(config, func (s string, a ...string) error { return nil })
+	err = setRules(config, func(s string, a ...string) error { return nil })
 	assert.EqualError(t, err, "No audit rules found.")
 
 	// failure to set rule
 	r := 0
 	config.Set("rules", []string{"-a -1 -2", "", "-a -3 -4"})
-	err = setRules(config, func (s string, a ...string) error {
+	err = setRules(config, func(s string, a ...string) error {
 		if a[0] != "-D" {
 			return errors.New("testing rule")
 		}
@@ -79,7 +79,7 @@ func Test_setRules(t *testing.T) {
 
 	// properly set rules
 	r = 0
-	err = setRules(config, func (s string, a ...string) error {
+	err = setRules(config, func(s string, a ...string) error {
 		// Skip the flush rules
 		if a[0] != "-a" {
 			return nil
@@ -136,8 +136,8 @@ func Test_createFileOutput(t *testing.T) {
 	g, _ := user.LookupGroupId(strconv.Itoa(gid))
 
 	// travis-ci is silly
-	if u.Name == "" {
-		u.Name = g.Name
+	if u.Username == "" {
+		u.Username = g.Name
 	}
 
 	// gid error
@@ -145,7 +145,7 @@ func Test_createFileOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	w, err = createFileOutput(c)
 	assert.EqualError(t, err, "Could not find gid for group . Error: group: unknown group ")
 	assert.Nil(t, w)
@@ -166,7 +166,7 @@ func Test_createFileOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 	w, err = createFileOutput(c)
 	assert.Nil(t, err)
@@ -239,8 +239,8 @@ func Test_createOutput(t *testing.T) {
 	g, _ := user.LookupGroupId(strconv.Itoa(gid))
 
 	// travis-ci is silly
-	if u.Name == "" {
-		u.Name = g.Name
+	if u.Username == "" {
+		u.Username = g.Name
 	}
 
 	l, err := net.Listen("tcp", ":0")
@@ -260,7 +260,7 @@ func Test_createOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 
 	w, err = createOutput(c)
@@ -307,7 +307,7 @@ func Test_createOutput(t *testing.T) {
 	c.Set("output.file.attempts", 1)
 	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
 	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Name)
+	c.Set("output.file.user", u.Username)
 	c.Set("output.file.group", g.Name)
 	w, err = createOutput(c)
 	assert.Nil(t, err)
