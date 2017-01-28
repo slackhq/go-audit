@@ -34,7 +34,7 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 	syscall.Close(n.fd)
 	n.KeepConnection()
 	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
-	assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
+	assert.Equal(t, "Error occurred while trying to set the audit PID: bad file descriptor\n", elb.String(), "Figured we would have an error")
 }
 
 func TestNetlinkClient_SendReceive(t *testing.T) {
