@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	EVENT_START = 1300 // Start of the audit type ids that we care about
+	EVENT_START = 1100 // Start of the audit type ids that we care about
 	EVENT_END   = 1399 // End of the audit type ids that we care about
 	EVENT_EOE   = 1320 // End of multi packet event
 )

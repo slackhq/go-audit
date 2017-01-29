@@ -10,7 +10,7 @@ import (
 )
 
 func TestMarshallerConstants(t *testing.T) {
-	assert.Equal(t, 1300, EVENT_START)
+	assert.Equal(t, 1100, EVENT_START)
 	assert.Equal(t, 1399, EVENT_END)
 	assert.Equal(t, 1320, EVENT_EOE)
 }
@@ -51,12 +51,12 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	)
 	assert.Equal(t, 0, len(m.msgs))
 
-	// Ignore below 1300
+	// Ignore below 1100
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
 			Len:   uint32(44),
-			Type:  uint16(1299),
+			Type:  uint16(1099),
 			Flags: uint16(0),
 			Seq:   uint32(0),
 			Pid:   uint32(0),
