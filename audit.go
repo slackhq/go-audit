@@ -336,15 +336,15 @@ func main() {
 	nlClient := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
 	marshaller := NewAuditMarshaller(
 		writer,
-                uint16(config.GetInt("event.min")),
-                uint16(config.GetInt("event.max")),
+                uint16(config.GetInt("events.min")),
+                uint16(config.GetInt("events.max")),
 		config.GetBool("message_tracking.enabled"),
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
 		createFilters(config),
 	)
 
-	l.Println("Started processing events in the range [%d, %d]", config.GetInt("event.min"), config.GetInt("event.max"))
+	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
