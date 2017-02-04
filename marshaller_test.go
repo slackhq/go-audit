@@ -10,14 +10,12 @@ import (
 )
 
 func TestMarshallerConstants(t *testing.T) {
-	assert.Equal(t, 1100, EVENT_START)
-	assert.Equal(t, 1399, EVENT_END)
 	assert.Equal(t, 1320, EVENT_EOE)
 }
 
 func TestAuditMarshaller_Consume(t *testing.T) {
 	w := &bytes.Buffer{}
-	m := NewAuditMarshaller(NewAuditWriter(w, 1), false, false, 0, []AuditFilter{})
+	m := NewAuditMarshaller(NewAuditWriter(w, 1), uint16(1100), uint16(1399), false, false, 0, []AuditFilter{})
 
 	// Flush group on 1320
 	m.Consume(&syscall.NetlinkMessage{
@@ -125,7 +123,7 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	t.Skip()
 	return
 	lb, elb := hookLogger()
-	m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), false, false, 0, []AuditFilter{})
+	m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
 
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{

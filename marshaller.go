@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	EVENT_START = 1100 // Start of the audit type ids that we care about
-	EVENT_END   = 1399 // End of the audit type ids that we care about
 	EVENT_EOE   = 1320 // End of multi packet event
 )
 
@@ -19,6 +17,8 @@ type AuditMarshaller struct {
 	lastSeq       int
 	missed        map[int]bool
 	worstLag      int
+        eventMin      uint16
+        eventMax      uint16
 	trackMessages bool
 	logOutOfOrder bool
 	maxOutOfOrder int
@@ -33,11 +33,13 @@ type AuditFilter struct {
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
 		missed:        make(map[int]bool, 10),
+                eventMin:      eventMin,
+                eventMax:      eventMax,
 		trackMessages: trackMessages,
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
@@ -73,7 +75,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		a.detectMissing(aMsg.Seq)
 	}
 
-	if nlMsg.Header.Type < EVENT_START || nlMsg.Header.Type > EVENT_END {
+	if nlMsg.Header.Type < a.eventMin || nlMsg.Header.Type > a.eventMax {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
 		a.flushOld()
 		return

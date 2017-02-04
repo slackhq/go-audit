@@ -12,6 +12,12 @@ socket_buffer:
   # Maximum max is net.core.rmem_max (/proc/sys/net/core/rmem_max)
   receive: 16384
 
+events:
+  # Minimum event type to capture, default 1300
+  min: 1300
+  # Maximum event type to capture, default 1399
+  max: 1399
+
 # Configure message sequence tracking
 message_tracking:
   # Track messages and identify if we missed any, default true
