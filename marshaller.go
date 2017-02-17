@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	EVENT_EOE   = 1320 // End of multi packet event
+	EVENT_EOE = 1320 // End of multi packet event
 )
 
 type AuditMarshaller struct {
@@ -17,8 +17,8 @@ type AuditMarshaller struct {
 	lastSeq       int
 	missed        map[int]bool
 	worstLag      int
-        eventMin      uint16
-        eventMax      uint16
+	eventMin      uint16
+	eventMax      uint16
 	trackMessages bool
 	logOutOfOrder bool
 	maxOutOfOrder int
@@ -38,8 +38,8 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
 		missed:        make(map[int]bool, 10),
-                eventMin:      eventMin,
-                eventMax:      eventMax,
+		eventMin:      eventMin,
+		eventMax:      eventMax,
 		trackMessages: trackMessages,
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
