@@ -10,14 +10,12 @@ import (
 )
 
 func TestMarshallerConstants(t *testing.T) {
-	assert.Equal(t, 1300, EVENT_START)
-	assert.Equal(t, 1399, EVENT_END)
 	assert.Equal(t, 1320, EVENT_EOE)
 }
 
 func TestAuditMarshaller_Consume(t *testing.T) {
 	w := &bytes.Buffer{}
-	m := NewAuditMarshaller(NewAuditWriter(w, 1), false, false, 0, []AuditFilter{})
+	m := NewAuditMarshaller(NewAuditWriter(w, 1), uint16(1100), uint16(1399), false, false, 0, []AuditFilter{})
 
 	// Flush group on 1320
 	m.Consume(&syscall.NetlinkMessage{
@@ -51,12 +49,12 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	)
 	assert.Equal(t, 0, len(m.msgs))
 
-	// Ignore below 1300
+	// Ignore below 1100
 	w.Reset()
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
 			Len:   uint32(44),
-			Type:  uint16(1299),
+			Type:  uint16(1099),
 			Flags: uint16(0),
 			Seq:   uint32(0),
 			Pid:   uint32(0),
@@ -125,7 +123,7 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	t.Skip()
 	return
 	lb, elb := hookLogger()
-	m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), false, false, 0, []AuditFilter{})
+	m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
 
 	m.Consume(&syscall.NetlinkMessage{
 		Header: syscall.NlMsghdr{
