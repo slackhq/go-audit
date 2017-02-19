@@ -22,6 +22,7 @@ const (
 
 type AuditMessage struct {
 	Type      uint16 `json:"type"`
+	TypeName  string `json:"type_name,omitempty"`
 	Data      string `json:"data"`
 	Seq       int    `json:"-"`
 	AuditTime string `json:"-"`
@@ -52,14 +53,21 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 }
 
 // Creates a new go-audit message from a netlink message
-func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
+func NewAuditMessage(nlm *syscall.NetlinkMessage, includeMsgTypeName bool) *AuditMessage {
 	aTime, seq := parseAuditHeader(nlm)
-	return &AuditMessage{
+
+	am := AuditMessage{
 		Type:      nlm.Header.Type,
 		Data:      string(nlm.Data),
 		Seq:       seq,
 		AuditTime: aTime,
 	}
+
+	if includeMsgTypeName {
+		am.TypeName = AuditMessageTypeNames[nlm.Header.Type]
+	}
+
+	return &am
 }
 
 // Gets the timestamp and audit sequence id from a netlink message

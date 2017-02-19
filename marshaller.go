@@ -12,18 +12,19 @@ const (
 )
 
 type AuditMarshaller struct {
-	msgs          map[int]*AuditMessageGroup
-	writer        *AuditWriter
-	lastSeq       int
-	missed        map[int]bool
-	worstLag      int
-	eventMin      uint16
-	eventMax      uint16
-	trackMessages bool
-	logOutOfOrder bool
-	maxOutOfOrder int
-	attempts      int
-	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+	msgs               map[int]*AuditMessageGroup
+	writer             *AuditWriter
+	lastSeq            int
+	missed             map[int]bool
+	worstLag           int
+	eventMin           uint16
+	eventMax           uint16
+	trackMessages      bool
+	logOutOfOrder      bool
+	maxOutOfOrder      int
+	attempts           int
+	includeMsgTypeName bool
+	filters            map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
 }
 
 type AuditFilter struct {
@@ -33,17 +34,18 @@ type AuditFilter struct {
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, includeMsgTypeName bool, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
-		writer:        w,
-		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
-		missed:        make(map[int]bool, 10),
-		eventMin:      eventMin,
-		eventMax:      eventMax,
-		trackMessages: trackMessages,
-		logOutOfOrder: logOOO,
-		maxOutOfOrder: maxOOO,
-		filters:       make(map[string]map[uint16][]*regexp.Regexp),
+		writer:             w,
+		msgs:               make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
+		missed:             make(map[int]bool, 10),
+		eventMin:           eventMin,
+		eventMax:           eventMax,
+		trackMessages:      trackMessages,
+		logOutOfOrder:      logOOO,
+		maxOutOfOrder:      maxOOO,
+		includeMsgTypeName: includeMsgTypeName,
+		filters:            make(map[string]map[uint16][]*regexp.Regexp),
 	}
 
 	for _, filter := range filters {
@@ -63,7 +65,7 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 
 // Ingests a netlink message and likely prepares it to be logged
 func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
-	aMsg := NewAuditMessage(nlMsg)
+	aMsg := NewAuditMessage(nlMsg, a.includeMsgTypeName)
 
 	if aMsg.Seq == 0 {
 		// We got an invalid audit message, return the current message and reset
