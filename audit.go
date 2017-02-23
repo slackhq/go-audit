@@ -347,8 +347,19 @@ func main() {
 
 	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
 
+	process_events := true
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		for _ = range sigc {
+			nlClient.Close()
+			process_events = false
+		}
+	}()
+
 	//Main loop. Get data from netlink and send it to the json lib for processing
-	for {
+	for process_events {
 		msg, err := nlClient.Receive()
 		if err != nil {
 			el.Printf("Error during message receive: %+v\n", err)
@@ -361,4 +372,7 @@ func main() {
 
 		marshaller.Consume(msg)
 	}
+
+	l.Println("Exiting go-audit.")
+	os.Exit(0)
 }

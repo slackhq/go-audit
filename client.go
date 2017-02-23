@@ -69,6 +69,11 @@ func NewNetlinkClient(recvSize int) *NetlinkClient {
 
 	go func() {
 		for {
+			// Bail if our socket is closed, which typically means we're exiting
+			if n.fd < 0 {
+				return
+			}
+
 			n.KeepConnection()
 			time.Sleep(time.Second * 5)
 		}
@@ -127,11 +132,11 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 	return msg, nil
 }
 
-func (n *NetlinkClient) KeepConnection() {
+func (n *NetlinkClient) SetPid(pid uint32) {
 	payload := &AuditStatusPayload{
 		Mask:    4,
 		Enabled: 1,
-		Pid:     uint32(syscall.Getpid()),
+		Pid:     pid,
 		//TODO: Failure: http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L338
 	}
 
@@ -143,6 +148,19 @@ func (n *NetlinkClient) KeepConnection() {
 
 	err := n.Send(packet, payload)
 	if err != nil {
-		el.Println("Error occurred while trying to keep the connection:", err)
+		el.Println("Error occurred while trying to set the audit PID:", err)
+	}
+}
+
+func (n *NetlinkClient) KeepConnection() {
+	n.SetPid(uint32(syscall.Getpid()))
+}
+
+func (n *NetlinkClient) Close() {
+	// Tell kernel that we're closing
+	if n.fd >= 0 {
+		n.SetPid(0)
+		syscall.Close(n.fd)
+		n.fd = -1
 	}
 }

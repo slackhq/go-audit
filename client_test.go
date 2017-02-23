@@ -7,6 +7,7 @@ import (
 	"os"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
@@ -34,7 +35,7 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 	syscall.Close(n.fd)
 	n.KeepConnection()
 	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
-	assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
+	assert.Equal(t, "Error occurred while trying to set the audit PID: bad file descriptor\n", elb.String(), "Figured we would have an error")
 }
 
 func TestNetlinkClient_SendReceive(t *testing.T) {
@@ -100,6 +101,41 @@ func TestNewNetlinkClient(t *testing.T) {
 
 	assert.Equal(t, "Socket receive buffer size: ", lb.String()[:28], "Expected some nice log lines")
 	assert.Equal(t, "", elb.String(), "Did not expect any error messages")
+}
+
+func TestNetlinkClient_Close(t *testing.T) {
+	n := makeNelinkClient(t)
+
+	done := make(chan bool)
+
+	go func() {
+		msg, err := n.Receive()
+		if err != nil {
+			t.Log("Did not expect an error", err)
+			done <- false
+			return
+		}
+
+		expectedData := []byte{4, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		binary.LittleEndian.PutUint32(expectedData[12:16], 0)
+
+		assert.Equal(t, uint16(1001), msg.Header.Type, "Header.Type mismatch")
+		assert.Equal(t, uint16(5), msg.Header.Flags, "Header.Flags mismatch")
+		assert.Equal(t, uint32(1), msg.Header.Seq, "Header.Seq mismatch")
+		assert.Equal(t, uint32(56), msg.Header.Len, "Packet size is wrong - this test is brittle though")
+		assert.EqualValues(t, msg.Data[:40], expectedData, "data was wrong")
+
+		done <- true
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	n.Close()
+	if !(<-done) {
+		t.FailNow()
+	}
+
+	// Make sure fd was closed
+	assert.Equal(t, -1, n.fd, "Netlink fd was not closed")
 }
 
 // Helper to make a client listening on a unix socket
