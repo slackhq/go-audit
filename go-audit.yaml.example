@@ -1,9 +1,3 @@
-#########################################################################################
-# Please note that until this bug https://github.com/spf13/viper/pull/165 is fixed      #
-# you _must_ specify all values despite the fact that they talk about having a default. #
-# Hopefully this problem with viper goes away soon                                      #
-#########################################################################################
-
 # Configure socket buffers, leave unset to use the system defaults
 # Values will be doubled by the kernel
 # It is recommended you do not set any of these values unless you really need to

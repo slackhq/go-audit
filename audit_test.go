@@ -2,8 +2,6 @@ package main
 
 import (
 	"errors"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log/syslog"
 	"net"
@@ -14,6 +12,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_loadConfig(t *testing.T) {

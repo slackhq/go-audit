@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/spf13/viper"
 )
 
 var l = log.New(os.Stdout, "", 0)
