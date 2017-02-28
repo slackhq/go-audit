@@ -26,11 +26,15 @@ func TestNewAuditMessage(t *testing.T) {
 		Data: []byte("audit(10000001:99): hi there"),
 	}
 
-	am := NewAuditMessage(msg)
+	am := NewAuditMessage(msg, false)
 	assert.Equal(t, uint16(1309), am.Type)
+	assert.Empty(t, am.TypeName)
 	assert.Equal(t, 99, am.Seq)
 	assert.Equal(t, "10000001", am.AuditTime)
 	assert.Equal(t, "hi there", am.Data)
+
+	am = NewAuditMessage(msg, true)
+	assert.Equal(t, "EXECVE", am.TypeName)
 }
 
 func TestAuditMessageGroup_AddMessage(t *testing.T) {

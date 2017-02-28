@@ -2,6 +2,12 @@ bin:
 	govendor sync
 	go build
 
+lookup.go: genlookup/genlookup
+	./genlookup/genlookup >lookup.go
+
+genlookup/genlookup: genlookup/genlookup.go
+	go build -o genlookup/genlookup genlookup/genlookup.go
+
 test:
 	govendor sync
 	go test -v

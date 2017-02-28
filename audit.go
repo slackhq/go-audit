@@ -36,6 +36,7 @@ func loadConfig(configFile string) (*viper.Viper, error) {
 	config.SetDefault("message_tracking.enabled", true)
 	config.SetDefault("message_tracking.log_out_of_order", false)
 	config.SetDefault("message_tracking.max_out_of_order", 500)
+	config.SetDefault("include_message_type_name", false)
 	config.SetDefault("output.syslog.enabled", false)
 	config.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0|syslog.LOG_WARNING))
 	config.SetDefault("output.syslog.tag", "go-audit")
@@ -342,6 +343,7 @@ func main() {
 		config.GetBool("message_tracking.enabled"),
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
+		config.GetBool("include_message_type_name"),
 		createFilters(config),
 	)
 
