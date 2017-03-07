@@ -62,7 +62,7 @@ func Test_setRules(t *testing.T) {
 
 	// fail on 0 rules
 	err = setRules(config, func(s string, a ...string) error { return nil })
-	assert.EqualError(t, err, "No audit rules found.")
+	assert.EqualError(t, err, "No audit rules found")
 
 	// failure to set rule
 	r := 0

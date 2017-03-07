@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMarshallerConstants(t *testing.T) {
@@ -122,23 +123,23 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	//TODO: cant test because completeMessage calls exit
 	t.Skip()
 	return
-	lb, elb := hookLogger()
-	m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
+	// lb, elb := hookLogger()
+	// m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
 
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
-			Len:   uint32(44),
-			Type:  uint16(1300),
-			Flags: uint16(0),
-			Seq:   uint32(0),
-			Pid:   uint32(0),
-		},
-		Data: []byte("audit(10000001:4): hi there"),
-	})
+	// m.Consume(&syscall.NetlinkMessage{
+	// 	Header: syscall.NlMsghdr{
+	// 		Len:   uint32(44),
+	// 		Type:  uint16(1300),
+	// 		Flags: uint16(0),
+	// 		Seq:   uint32(0),
+	// 		Pid:   uint32(0),
+	// 	},
+	// 	Data: []byte("audit(10000001:4): hi there"),
+	// })
 
-	m.completeMessage(4)
-	assert.Equal(t, "!", lb.String())
-	assert.Equal(t, "!", elb.String())
+	// m.completeMessage(4)
+	// assert.Equal(t, "!", lb.String())
+	// assert.Equal(t, "!", elb.String())
 }
 
 func new1320(seq string) *syscall.NetlinkMessage {

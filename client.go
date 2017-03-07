@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
+// Endianness is an alias for what we assume is the current machine endianness
 var Endianness = binary.LittleEndian
 
 const (
-	//http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L398
+	// MAX_AUDIT_MESSAGE_LENGTH see http://lxr.free-electrons.com/source/include/uapi/linux/audit.h#L398
 	MAX_AUDIT_MESSAGE_LENGTH = 8970
 )
 
@@ -30,7 +31,7 @@ type AuditStatusPayload struct {
 	BacklogWaitTime uint32
 }
 
-//An alias to give the header a similar name here
+// NetlinkPacket is an alias to give the header a similar name here
 type NetlinkPacket syscall.NlMsghdr
 
 type NetlinkClient struct {
@@ -40,6 +41,7 @@ type NetlinkClient struct {
 	buf     []byte
 }
 
+// NewNetlinkClient creates a new NetLinkClient and optionally tries to modify the netlink recv buffer
 func NewNetlinkClient(recvSize int) *NetlinkClient {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
@@ -59,7 +61,9 @@ func NewNetlinkClient(recvSize int) *NetlinkClient {
 
 	// Set the buffer size if we were asked
 	if recvSize > 0 {
-		err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, recvSize)
+		if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, recvSize); err != nil {
+			el.Println("Failed to set receive buffer size")
+		}
 	}
 
 	// Print the current receive buffer size
@@ -77,6 +81,7 @@ func NewNetlinkClient(recvSize int) *NetlinkClient {
 	return n
 }
 
+// Send will send a packet and payload to the netlink socket without waiting for a response
 func (n *NetlinkClient) Send(np *NetlinkPacket, a *AuditStatusPayload) error {
 	//We need to get the length first. This is a bit wasteful, but requests are rare so yolo..
 	buf := new(bytes.Buffer)
@@ -103,6 +108,7 @@ func (n *NetlinkClient) Send(np *NetlinkPacket, a *AuditStatusPayload) error {
 	return nil
 }
 
+// Receive will receive a packet from a netlink socket
 func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 	nlen, _, err := syscall.Recvfrom(n.fd, n.buf, 0)
 	if err != nil {
@@ -127,6 +133,7 @@ func (n *NetlinkClient) Receive() (*syscall.NetlinkMessage, error) {
 	return msg, nil
 }
 
+// KeepConnection re-establishes our connection to the netlink socket
 func (n *NetlinkClient) KeepConnection() {
 	payload := &AuditStatusPayload{
 		Mask:    4,

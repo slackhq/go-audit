@@ -75,7 +75,7 @@ func setRules(config *viper.Viper, e executor) error {
 			l.Printf("Added audit rule #%d\n", i+1)
 		}
 	} else {
-		return errors.New("No audit rules found.")
+		return errors.New("No audit rules found")
 	}
 
 	return nil
