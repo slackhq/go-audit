@@ -55,7 +55,7 @@ func loadConfig(configFile string) (*viper.Viper, error) {
 func setRules(config *viper.Viper, e executor) error {
 	// Clear existing rules
 	if err := e("auditctl", "-D"); err != nil {
-		return errors.New(fmt.Sprintf("Failed to flush existing audit rules. Error: %s", err))
+		return fmt.Errorf("Failed to flush existing audit rules. Error: %s", err)
 	}
 
 	l.Println("Flushed existing audit rules")
@@ -69,7 +69,7 @@ func setRules(config *viper.Viper, e executor) error {
 			}
 
 			if err := e("auditctl", strings.Fields(v)...); err != nil {
-				return errors.New(fmt.Sprintf("Failed to add rule #%d. Error: %s", i+1, err))
+				return fmt.Errorf("Failed to add rule #%d. Error: %s", i+1, err)
 			}
 
 			l.Printf("Added audit rule #%d\n", i+1)
@@ -126,9 +126,7 @@ func createOutput(config *viper.Viper) (*AuditWriter, error) {
 func createSyslogOutput(config *viper.Viper) (*AuditWriter, error) {
 	attempts := config.GetInt("output.syslog.attempts")
 	if attempts < 1 {
-		return nil, errors.New(
-			fmt.Sprintf("Output attempts for syslog must be at least 1, %v provided", attempts),
-		)
+		return nil, fmt.Errorf("Output attempts for syslog must be at least 1, %v provided", attempts)
 	}
 
 	syslogWriter, err := syslog.Dial(
@@ -139,7 +137,7 @@ func createSyslogOutput(config *viper.Viper) (*AuditWriter, error) {
 	)
 
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Failed to open syslog writer. Error: %v", err))
+		return nil, fmt.Errorf("Failed to open syslog writer. Error: %v", err)
 	}
 
 	return NewAuditWriter(syslogWriter, attempts), nil
@@ -148,9 +146,7 @@ func createSyslogOutput(config *viper.Viper) (*AuditWriter, error) {
 func createFileOutput(config *viper.Viper) (*AuditWriter, error) {
 	attempts := config.GetInt("output.file.attempts")
 	if attempts < 1 {
-		return nil, errors.New(
-			fmt.Sprintf("Output attempts for file must be at least 1, %v provided", attempts),
-		)
+		return nil, fmt.Errorf("Output attempts for file must be at least 1, %v provided", attempts)
 	}
 
 	mode := os.FileMode(config.GetInt("output.file.mode"))
@@ -164,37 +160,37 @@ func createFileOutput(config *viper.Viper) (*AuditWriter, error) {
 	)
 
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Failed to open output file. Error: %s", err))
+		return nil, fmt.Errorf("Failed to open output file. Error: %s", err)
 	}
 
 	if err := f.Chmod(mode); err != nil {
-		return nil, errors.New(fmt.Sprintf("Failed to set file permissions. Error: %s", err))
+		return nil, fmt.Errorf("Failed to set file permissions. Error: %s", err)
 	}
 
 	uname := config.GetString("output.file.user")
 	u, err := user.Lookup(uname)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Could not find uid for user %s. Error: %s", uname, err))
+		return nil, fmt.Errorf("Could not find uid for user %s. Error: %s", uname, err)
 	}
 
 	gname := config.GetString("output.file.group")
 	g, err := user.LookupGroup(gname)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Could not find gid for group %s. Error: %s", gname, err))
+		return nil, fmt.Errorf("Could not find gid for group %s. Error: %s", gname, err)
 	}
 
 	uid, err := strconv.ParseInt(u.Uid, 10, 32)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Found uid could not be parsed. Error: %s", err))
+		return nil, fmt.Errorf("Found uid could not be parsed. Error: %s", err)
 	}
 
 	gid, err := strconv.ParseInt(g.Gid, 10, 32)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Found gid could not be parsed. Error: %s", err))
+		return nil, fmt.Errorf("Found gid could not be parsed. Error: %s", err)
 	}
 
 	if err = f.Chown(int(uid), int(gid)); err != nil {
-		return nil, errors.New(fmt.Sprintf("Could not chown output file. Error: %s", err))
+		return nil, fmt.Errorf("Could not chown output file. Error: %s", err)
 	}
 
 	return NewAuditWriter(f, attempts), nil
@@ -226,9 +222,7 @@ func handleLogRotation(config *viper.Viper, writer *AuditWriter) {
 func createStdOutOutput(config *viper.Viper) (*AuditWriter, error) {
 	attempts := config.GetInt("output.stdout.attempts")
 	if attempts < 1 {
-		return nil, errors.New(
-			fmt.Sprintf("Output attempts for stdout must be at least 1, %v provided", attempts),
-		)
+		return nil, fmt.Errorf("Output attempts for stdout must be at least 1, %v provided", attempts)
 	}
 
 	// l logger is no longer stdout
