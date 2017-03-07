@@ -158,7 +158,7 @@ func (a *AuditMarshaller) detectMissing(seq int) {
 		}
 	}
 
-	for missedSeq, _ := range a.missed {
+	for missedSeq := range a.missed {
 		if missedSeq == seq {
 			lag := a.lastSeq - missedSeq
 			if lag > a.worstLag {
