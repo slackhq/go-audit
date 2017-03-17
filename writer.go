@@ -20,9 +20,9 @@ func NewAuditWriter(w io.Writer, attempts int) *AuditWriter {
 	}
 }
 
-func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
+func (a *AuditWriter) Write(v interface{}) (err error) {
 	for i := 0; i < a.attempts; i++ {
-		err = a.e.Encode(msg)
+		err = a.e.Encode(v)
 		if err == nil {
 			break
 		}

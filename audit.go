@@ -15,11 +15,19 @@ import (
 	"strings"
 	"syscall"
 
+	"crypto/sha256"
 	"github.com/spf13/viper"
+	"io"
+	"io/ioutil"
 )
 
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
+
+const Version = "1.0.0-pre1"
+
+// Used for making json objects
+type m map[string]interface{}
 
 type executor func(string, ...string) error
 
@@ -302,6 +310,39 @@ func createFilters(config *viper.Viper) []AuditFilter {
 	return filters
 }
 
+func logStart(c *viper.Viper, w *AuditWriter) error {
+	f, err := os.Open(c.ConfigFileUsed())
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	s := sha256.New()
+	if _, err := io.Copy(s, f); err != nil {
+		return err
+	}
+
+	b, err := ioutil.ReadFile("/proc/uptime")
+	if err != nil {
+		return err
+	}
+	fields := strings.Split(string(b), " ")
+	uptime, err := strconv.ParseFloat(fields[0], 64)
+
+	if err != nil {
+		return err
+	}
+
+	w.Write(&m{
+		"message":        "Starting up",
+		"machine_uptime": uptime,
+		"config_sha256":  fmt.Sprintf("%x", s.Sum(nil)),
+		"version":        Version,
+	})
+
+	return nil
+}
+
 func main() {
 	configFile := flag.String("config", "", "Config file location")
 
@@ -324,6 +365,10 @@ func main() {
 		el.Fatal(err)
 	}
 
+	if err := logStart(config, writer); err != nil {
+		el.Fatal(err)
+	}
+
 	if err := setRules(config, lExec); err != nil {
 		el.Fatal(err)
 	}
@@ -339,13 +384,20 @@ func main() {
 		createFilters(config),
 	)
 
-	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
+	message := fmt.Sprintf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
+	if err := writer.Write(&m{"message": message}); err != nil {
+		el.Fatal(err)
+	}
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
 		msg, err := nlClient.Receive()
 		if err != nil {
-			el.Printf("Error during message receive: %+v\n", err)
+			writer.Write(&m{
+				"message": "Error during message receive",
+				"error":   err,
+			})
+
 			continue
 		}
 
