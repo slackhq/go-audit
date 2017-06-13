@@ -118,6 +118,14 @@ Wikipedia has a pretty good [page](https://en.wikipedia.org/wiki/Syslog) on this
 | **local6 (22)**   | 176      | 177       | 178       | 179     | 180      | 181        | 182       | 183       |
 | **local7 (23)**   | 184      | 185       | 186       | 187     | 188      | 189        | 190       | 191       |
 
+#### I am seeing duplicate entries in syslog!
+
+This is likely because you are running `journald` which is also reading audit events. To disable it you need to disable the functionality in `journald`.
+
+```sh
+sudo systemctl mask systemd-journald-audit.socket
+```
+
 ## Thanks!
 
 To Hardik Juneja, Arun Sori, Aalekh Nigam Aalekhn for the inspiration via https://github.com/mozilla/audit-go
