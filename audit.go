@@ -231,7 +231,7 @@ func createStdOutOutput(config *viper.Viper) (*AuditWriter, error) {
 	return NewAuditWriter(os.Stdout, attempts), nil
 }
 
-func createFilters(config *viper.Viper) []AuditFilter {
+func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 	var err error
 	var ok bool
 
@@ -239,18 +239,18 @@ func createFilters(config *viper.Viper) []AuditFilter {
 	filters := []AuditFilter{}
 
 	if fs == nil {
-		return filters
+		return filters, nil
 	}
 
 	ft, ok := fs.([]interface{})
 	if !ok {
-		return filters
+		return filters, fmt.Errorf("Could not parse filters object")
 	}
 
 	for i, f := range ft {
 		f2, ok := f.(map[interface{}]interface{})
 		if !ok {
-			el.Fatal("Could not parse filter ", i+1, f)
+			return filters, fmt.Errorf("Could not parse filter %d; '%+v'", i+1, f)
 		}
 
 		af := AuditFilter{}
@@ -260,28 +260,25 @@ func createFilters(config *viper.Viper) []AuditFilter {
 				if ev, ok := v.(string); ok {
 					fv, err := strconv.ParseUint(ev, 10, 64)
 					if err != nil {
-						el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v, " ", err)
+						return filters, fmt.Errorf("`message_type` in filter %d could not be parsed; Value: `%+v`; Error: %s", i+1, v, err)
 					}
 					af.messageType = uint16(fv)
 
 				} else if ev, ok := v.(int); ok {
-					if !ok {
-						el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v)
-					}
 					af.messageType = uint16(ev)
 
 				} else {
-					el.Fatal("`message_type` in filter ", i+1, " could not be parsed ", v)
+					return filters, fmt.Errorf("`message_type` in filter %d could not be parsed; Value: `%+v`", i+1, v)
 				}
 
 			case "regex":
 				re, ok := v.(string)
 				if !ok {
-					el.Fatal("`regex` in filter ", i+1, " could not be parsed ", v)
+					return filters, fmt.Errorf("`regex` in filter %d could not be parsed; Value: `%+v`", i+1, v)
 				}
 
 				if af.regex, err = regexp.Compile(re); err != nil {
-					el.Fatal("`regex` in filter ", i+1, " could not be parsed ", v, " ", err)
+					return filters, fmt.Errorf("`regex` in filter %d could not be parsed; Value: `%+v`; Error: %s", i+1, v, err)
 				}
 
 			case "syscall":
@@ -290,16 +287,28 @@ func createFilters(config *viper.Viper) []AuditFilter {
 				} else if ev, ok := v.(int); ok {
 					af.syscall = strconv.Itoa(ev)
 				} else {
-					el.Fatal("`syscall` in filter ", i+1, " could not be parsed ", v)
+					return filters, fmt.Errorf("`syscall` in filter %d could not be parsed; Value: `%+v`", i+1, v)
 				}
 			}
 		}
 
+		if af.regex == nil {
+			return filters, fmt.Errorf("Filter %d is missing the `regex` entry", i+1)
+		}
+
+		if af.syscall == "" {
+			return filters, fmt.Errorf("Filter %d is missing the `syscall` entry", i+1)
+		}
+
+		if af.messageType == 0 {
+			return filters, fmt.Errorf("Filter %d is missing the `message_type` entry", i+1)
+		}
+
 		filters = append(filters, af)
-		l.Printf("Ignoring  syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
+		l.Printf("Ignoring syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
 	}
 
-	return filters
+	return filters, nil
 }
 
 func main() {
@@ -328,6 +337,11 @@ func main() {
 		el.Fatal(err)
 	}
 
+	filters, err := createFilters(config)
+	if err != nil {
+		el.Fatal(err)
+	}
+
 	nlClient := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
 	marshaller := NewAuditMarshaller(
 		writer,
@@ -336,7 +350,7 @@ func main() {
 		config.GetBool("message_tracking.enabled"),
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
-		createFilters(config),
+		filters,
 	)
 
 	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))

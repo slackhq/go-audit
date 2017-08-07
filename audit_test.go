@@ -328,6 +328,135 @@ func Test_createOutput(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_createFilters(t *testing.T) {
+	lb, elb := hookLogger()
+	defer resetLogger()
+
+	// no filters
+	c := viper.New()
+	f, err := createFilters(c)
+	assert.Nil(t, err)
+	assert.Empty(t, f)
+
+	// Bad outer filter value
+	c = viper.New()
+	c.Set("filters", 1)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Could not parse filters object")
+	assert.Empty(t, f)
+
+	// Bad inner filter value
+	c = viper.New()
+	rf := make([]interface{}, 0)
+	rf = append(rf, "bad filter definition")
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Could not parse filter 1; 'bad filter definition'")
+	assert.Empty(t, f)
+
+	// Bad message type - string
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"message_type": "bad message type"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`message_type` in filter 1 could not be parsed; Value: `bad message type`; Error: strconv.ParseUint: parsing \"bad message type\": invalid syntax")
+	assert.Empty(t, f)
+
+	// Bad message type - unknown
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"message_type": false})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`message_type` in filter 1 could not be parsed; Value: `false`")
+	assert.Empty(t, f)
+
+	// Bad regex - not string
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"regex": false})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`regex` in filter 1 could not be parsed; Value: `false`")
+	assert.Empty(t, f)
+
+	// Bad regex - un-parse-able
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"regex": "["})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`regex` in filter 1 could not be parsed; Value: `[`; Error: error parsing regexp: missing closing ]: `[`")
+	assert.Empty(t, f)
+
+	// Bad syscall - not string or int
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"syscall": []string{}})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`syscall` in filter 1 could not be parsed; Value: `[]`")
+	assert.Empty(t, f)
+
+	// Missing regex
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"syscall": "1", "message_type": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Filter 1 is missing the `regex` entry")
+	assert.Empty(t, f)
+
+	// Missing message_type
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"syscall": "1", "regex": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Filter 1 is missing the `message_type` entry")
+	assert.Empty(t, f)
+
+	// Missing message_type
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Filter 1 is missing the `syscall` entry")
+	assert.Empty(t, f)
+
+	// Good with strings
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1", "syscall": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, f)
+	assert.Equal(t, "1", f[0].syscall)
+	assert.Equal(t, uint16(1), f[0].messageType)
+	assert.Equal(t, "1", f[0].regex.String())
+	assert.Empty(t, elb.String())
+	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
+
+	// Good with ints
+	lb.Reset()
+	elb.Reset()
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"message_type": 1, "regex": "1", "syscall": 1})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, f)
+	assert.Equal(t, "1", f[0].syscall)
+	assert.Equal(t, uint16(1), f[0].messageType)
+	assert.Equal(t, "1", f[0].regex.String())
+	assert.Empty(t, elb.String())
+	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
+}
+
 func Benchmark_MultiPacketMessage(b *testing.B) {
 	marshaller := NewAuditMarshaller(NewAuditWriter(&noopWriter{}, 1), uint16(1300), uint16(1399), false, false, 1, []AuditFilter{})
 
