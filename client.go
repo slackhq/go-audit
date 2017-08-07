@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"fmt"
 )
 
 // Endianness is an alias for what we assume is the current machine endianness
@@ -42,10 +43,10 @@ type NetlinkClient struct {
 }
 
 // NewNetlinkClient creates a new NetLinkClient and optionally tries to modify the netlink recv buffer
-func NewNetlinkClient(recvSize int) *NetlinkClient {
+func NewNetlinkClient(recvSize int) (*NetlinkClient, error) {
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_AUDIT)
 	if err != nil {
-		el.Fatalln("Could not create a socket:", err)
+		return nil, fmt.Errorf("Could not create a socket: %s", err)
 	}
 
 	n := &NetlinkClient{
@@ -56,7 +57,7 @@ func NewNetlinkClient(recvSize int) *NetlinkClient {
 
 	if err = syscall.Bind(fd, n.address); err != nil {
 		syscall.Close(fd)
-		el.Fatalln("Could not bind to netlink socket:", err)
+		return nil, fmt.Errorf("Could not bind to netlink socket: %s", err)
 	}
 
 	// Set the buffer size if we were asked
@@ -78,7 +79,7 @@ func NewNetlinkClient(recvSize int) *NetlinkClient {
 		}
 	}()
 
-	return n
+	return n, nil
 }
 
 // Send will send a packet and payload to the netlink socket without waiting for a response
