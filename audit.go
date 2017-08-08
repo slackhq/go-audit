@@ -342,7 +342,11 @@ func main() {
 		el.Fatal(err)
 	}
 
-	nlClient := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
+	nlClient, err := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
+	if err != nil {
+		el.Fatal(err)
+	}
+
 	marshaller := NewAuditMarshaller(
 		writer,
 		uint16(config.GetInt("events.min")),
