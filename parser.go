@@ -86,7 +86,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 			return
 		}
 		if len(msg.Data) < (headerStop + 3) {
-			msg.Data = ""
+			msg.Data = []byte{}
 		} else {
 			// Remove the header from data
 			msg.Data = msg.Data[headerStop+3:]
