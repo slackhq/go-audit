@@ -81,7 +81,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 		time = header[HEADER_START_POS:sep]
 		seq, err = strconv.Atoi(header[sep+1:])
 		if err != nil {
-			time = 0
+			time = ""
 			seq = 0
 			return
 		}
