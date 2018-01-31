@@ -27,6 +27,17 @@ func lExec(s string, a ...string) error {
 	return exec.Command(s, a...).Run()
 }
 
+func loadRules(rulesFile string) (*viper.Viper, error) {
+	config := viper.New()
+	config.SetConfigFile(rulesFile)
+
+	if err := config.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
 func loadConfig(configFile string) (*viper.Viper, error) {
 	config := viper.New()
 	config.SetConfigFile(configFile)
@@ -61,20 +72,43 @@ func setRules(config *viper.Viper, e executor) error {
 	l.Println("Flushed existing audit rules")
 
 	// Add ours in
-	if rules := config.GetStringSlice("rules"); len(rules) != 0 {
-		for i, v := range rules {
-			// Skip rules with no content
-			if v == "" {
+	ruleSection := config.Get("rules")
+	rules := []Rule{}
+
+	rawRuleList, _ := ruleSection.([]interface{})
+
+	for _, rawItem := range rawRuleList {
+		itemMap, _ := rawItem.(map[interface{}]interface{})
+
+		rule := Rule{}
+		for key, value := range itemMap {
+			if value == "" {
 				continue
 			}
 
-			if err := e("auditctl", strings.Fields(v)...); err != nil {
-				return fmt.Errorf("Failed to add rule #%d. Error: %s", i+1, err)
+			switch key {
+			case "rule":
+				ruleValue, _ := value.(string)
+				rule.rule = ruleValue
+			case "topic":
+				topicName, _ := value.(string)
+				rule.topic = topicName
 			}
-
-			l.Printf("Added audit rule #%d\n", i+1)
 		}
-	} else {
+
+		if rule.rule == "" {
+			continue
+		}
+
+		if err := e("auditctl", strings.Fields(rule.rule)...); err != nil {
+			return fmt.Errorf("Failed to add rule #%d. Error: %s", len(rules)+1, err)
+		}
+
+		rules = append(rules, rule)
+		l.Printf("Added audit rule #%d\n", len(rules))
+	}
+
+	if len(rules) == 0 {
 		return errors.New("No audit rules found")
 	}
 
@@ -313,6 +347,7 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 
 func main() {
 	configFile := flag.String("config", "", "Config file location")
+	rulesFile := flag.String("rules-file", "", "Rules file location")
 
 	flag.Parse()
 
@@ -322,7 +357,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *rulesFile == "" {
+		el.Println("A rules file must be provided")
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	config, err := loadConfig(*configFile)
+	if err != nil {
+		el.Fatal(err)
+	}
+
+	rules, err := loadRules(*rulesFile)
 	if err != nil {
 		el.Fatal(err)
 	}
@@ -333,11 +379,11 @@ func main() {
 		el.Fatal(err)
 	}
 
-	if err := setRules(config, lExec); err != nil {
+	if err := setRules(rules, lExec); err != nil {
 		el.Fatal(err)
 	}
 
-	filters, err := createFilters(config)
+	filters, err := createFilters(rules)
 	if err != nil {
 		el.Fatal(err)
 	}

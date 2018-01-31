@@ -1,0 +1,19 @@
+rules:
+  # Watch all 64 bit program executions
+  - rule: -a exit,always -F arch=b64 -S execve
+    topic: topic1
+  # Watch all 32 bit program executions
+  - rule: -a exit,always -F arch=b32 -S execve
+    topic: topic2
+  # Enable kernel auditing (required if not done via the "audit" kernel boot parameter)
+  # You can also use this to lock the rules. Locking requires a reboot to modify the ruleset.
+  # This should be the last rule in the chain.
+  - rule: -e 1
+    topic: topic3
+
+# If kaudit filtering isn't powerful enough you can use the following filter mechanism
+filters:
+  # Each filter consists of exactly 3 parts
+  - syscall: 49 # The syscall id of the message group (a single log line from go-audit), to test against the regex
+    message_type: 1306 # The message type identifier containing the data to test against the regex
+    regex: saddr=(10..|0A..) # The regex to test against the message specific message types data

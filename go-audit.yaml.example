@@ -87,20 +87,3 @@ log:
   #
   # See also: https://golang.org/pkg/log/#pkg-constants
   flags: 0
-
-rules:
-  # Watch all 64 bit program executions
-  - -a exit,always -F arch=b64 -S execve
-  # Watch all 32 bit program executions
-  - -a exit,always -F arch=b32 -S execve
-  # Enable kernel auditing (required if not done via the "audit" kernel boot parameter)
-  # You can also use this to lock the rules. Locking requires a reboot to modify the ruleset.
-  # This should be the last rule in the chain.
-  - -e 1
-
-# If kaudit filtering isn't powerful enough you can use the following filter mechanism
-filters:
-  # Each filter consists of exactly 3 parts
-  - syscall: 49 # The syscall id of the message group (a single log line from go-audit), to test against the regex
-    message_type: 1306 # The message type identifier containing the data to test against the regex
-    regex: saddr=(10..|0A..) # The regex to test against the message specific message types data
