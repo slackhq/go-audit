@@ -1,9 +1,12 @@
-package main
+package output
 
 import (
 	"encoding/json"
 	"io"
 	"time"
+
+	"github.com/slackhq/go-audit/pkg/parser"
+	"github.com/slackhq/go-audit/pkg/slog"
 )
 
 type AuditWriter struct {
@@ -20,7 +23,7 @@ func NewAuditWriter(w io.Writer, attempts int) *AuditWriter {
 	}
 }
 
-func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
+func (a *AuditWriter) Write(msg *parser.AuditMessageGroup) (err error) {
 	for i := 0; i < a.attempts; i++ {
 		err = a.e.Encode(msg)
 		if err == nil {
@@ -30,7 +33,7 @@ func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
 		if i != a.attempts {
 			// We have to reset the encoder because write errors are kept internally and can not be retried
 			a.e = json.NewEncoder(a.w)
-			el.Println("Failed to write message, retrying in 1 second. Error:", err)
+			slog.Error.Println("Failed to write message, retrying in 1 second. Error:", err)
 			time.Sleep(time.Second * 1)
 		}
 	}

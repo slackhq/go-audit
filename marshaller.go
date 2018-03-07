@@ -5,6 +5,10 @@ import (
 	"regexp"
 	"syscall"
 	"time"
+
+	"github.com/slackhq/go-audit/pkg/output"
+	"github.com/slackhq/go-audit/pkg/parser"
+	"github.com/slackhq/go-audit/pkg/slog"
 )
 
 const (
@@ -12,8 +16,8 @@ const (
 )
 
 type AuditMarshaller struct {
-	msgs          map[int]*AuditMessageGroup
-	writer        *AuditWriter
+	msgs          map[int]*parser.AuditMessageGroup
+	writer        *output.AuditWriter
 	lastSeq       int
 	missed        map[int]bool
 	worstLag      int
@@ -33,10 +37,10 @@ type AuditFilter struct {
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w *output.AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
 		writer:        w,
-		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
+		msgs:          make(map[int]*parser.AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
 		missed:        make(map[int]bool, 10),
 		eventMin:      eventMin,
 		eventMax:      eventMax,
@@ -63,7 +67,7 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 
 // Ingests a netlink message and likely prepares it to be logged
 func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
-	aMsg := NewAuditMessage(nlMsg)
+	aMsg := parser.NewAuditMessage(nlMsg)
 
 	if aMsg.Seq == 0 {
 		// We got an invalid audit message, return the current message and reset
@@ -90,7 +94,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		val.AddMessage(aMsg)
 	} else {
 		// Create a new AuditMessageGroup
-		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
+		a.msgs[aMsg.Seq] = parser.NewAuditMessageGroup(aMsg)
 	}
 
 	a.flushOld()
@@ -109,7 +113,7 @@ func (a *AuditMarshaller) flushOld() {
 
 // Write a complete message group to the configured output in json format
 func (a *AuditMarshaller) completeMessage(seq int) {
-	var msg *AuditMessageGroup
+	var msg *parser.AuditMessageGroup
 	var ok bool
 
 	if msg, ok = a.msgs[seq]; !ok {
@@ -123,14 +127,14 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	}
 
 	if err := a.writer.Write(msg); err != nil {
-		el.Println("Failed to write message. Error:", err)
+		slog.Error.Println("Failed to write message. Error:", err)
 		os.Exit(1)
 	}
 
 	delete(a.msgs, seq)
 }
 
-func (a *AuditMarshaller) dropMessage(msg *AuditMessageGroup) bool {
+func (a *AuditMarshaller) dropMessage(msg *parser.AuditMessageGroup) bool {
 	filters, ok := a.filters[msg.Syscall]
 	if !ok {
 		return false
@@ -166,11 +170,11 @@ func (a *AuditMarshaller) detectMissing(seq int) {
 			}
 
 			if a.logOutOfOrder {
-				el.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
+				slog.Error.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
 			}
 			delete(a.missed, missedSeq)
 		} else if seq-missedSeq > a.maxOutOfOrder {
-			el.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
+			slog.Error.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
 			delete(a.missed, missedSeq)
 		}
 	}

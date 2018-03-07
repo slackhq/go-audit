@@ -1,10 +1,11 @@
-package main
+package parser
 
 import (
-	"github.com/stretchr/testify/assert"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuditConstants(t *testing.T) {
