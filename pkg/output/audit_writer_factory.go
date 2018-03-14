@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/slackhq/go-audit/pkg/slog"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"github.com/spf13/viper"
 )
 

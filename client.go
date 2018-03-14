@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/slackhq/go-audit/pkg/slog"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 )
 
 // Endianness is an alias for what we assume is the current machine endianness

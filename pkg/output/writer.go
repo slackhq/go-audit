@@ -5,8 +5,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/slackhq/go-audit/pkg/parser"
-	"github.com/slackhq/go-audit/pkg/slog"
+	"github.com/pantheon-systems/go-audit/pkg/parser"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 )
 
 type AuditWriter struct {
