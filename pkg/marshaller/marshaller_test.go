@@ -1,4 +1,4 @@
-package main
+package marshaller
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/slackhq/go-audit/pkg/output"
+	"github.com/pantheon-systems/go-audit/pkg/output"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pantheon-systems/go-audit/pkg/marshaller"
 	"github.com/pantheon-systems/go-audit/pkg/output"
 	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"github.com/spf13/viper"
@@ -160,6 +161,10 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 				} else {
 					return filters, fmt.Errorf("`syscall` in filter %d could not be parsed; Value: `%+v`", i+1, v)
 				}
+			case "key":
+				if af.key, ok = v.(string); !ok {
+					return filters, fmt.Errorf("`key` in filter %d could not be parsed; Value: `%+v`", i+1, v)
+				}
 			}
 		}
 
@@ -167,16 +172,25 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 			return filters, fmt.Errorf("Filter %d is missing the `regex` entry", i+1)
 		}
 
-		if af.syscall == "" {
-			return filters, fmt.Errorf("Filter %d is missing the `syscall` entry", i+1)
-		}
+		logMsg := fmt.Sprintf("Ignoring messages with key `%s` matching string `%s`\n", af.key, af.regex.String())
+		if af.key == "" {
+			if af.syscall == "" && af.messageType == 0 {
+				return filters, fmt.Errorf("Filter %d is missing either the `key` entry or `syscall` and `message_type` entry", i+1)
+			}
 
-		if af.messageType == 0 {
-			return filters, fmt.Errorf("Filter %d is missing the `message_type` entry", i+1)
+			if af.syscall == "" {
+				return filters, fmt.Errorf("Filter %d is missing the `syscall` entry", i+1)
+			}
+
+			if af.messageType == 0 {
+				return filters, fmt.Errorf("Filter %d is missing the `message_type` entry", i+1)
+			}
+
+			logMsg = fmt.Sprintf("Ignoring syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
 		}
+		slog.Info.Print(logMsg)
 
 		filters = append(filters, af)
-		slog.Info.Printf("Ignoring syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
 	}
 
 	return filters, nil
@@ -218,7 +232,7 @@ func main() {
 		slog.Error.Fatal(err)
 	}
 
-	marshaller := NewAuditMarshaller(
+	marshaller := marshaller.NewAuditMarshaller(
 		writer,
 		uint16(config.GetInt("events.min")),
 		uint16(config.GetInt("events.max")),

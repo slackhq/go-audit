@@ -1,4 +1,4 @@
-package main
+package marshaller
 
 import (
 	"os"
@@ -34,6 +34,7 @@ type AuditFilter struct {
 	messageType uint16
 	regex       *regexp.Regexp
 	syscall     string
+	key         string
 }
 
 // Create a new marshaller
@@ -51,15 +52,23 @@ func NewAuditMarshaller(w *output.AuditWriter, eventMin uint16, eventMax uint16,
 	}
 
 	for _, filter := range filters {
-		if _, ok := am.filters[filter.syscall]; !ok {
-			am.filters[filter.syscall] = make(map[uint16][]*regexp.Regexp)
+		primaryKey := filter.syscall
+		if primaryKey == "" {
+			primaryKey = filter.key
 		}
 
-		if _, ok := am.filters[filter.syscall][filter.messageType]; !ok {
-			am.filters[filter.syscall][filter.messageType] = []*regexp.Regexp{}
+		if _, ok := am.filters[primaryKey]; !ok {
+			am.filters[primaryKey] = make(map[uint16][]*regexp.Regexp)
 		}
 
-		am.filters[filter.syscall][filter.messageType] = append(am.filters[filter.syscall][filter.messageType], filter.regex)
+		// if we are doing a key filter then the messageType will be 0 as it is the golang default
+		// value. This means that all key filters (vs syscall,messageType filters) are stored
+		// in [key][0] => []*regex.Regexp
+		if _, ok := am.filters[primaryKey][filter.messageType]; !ok {
+			am.filters[primaryKey][filter.messageType] = []*regexp.Regexp{}
+		}
+
+		am.filters[primaryKey][filter.messageType] = append(am.filters[primaryKey][filter.messageType], filter.regex)
 	}
 
 	return &am
@@ -135,6 +144,10 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 }
 
 func (a *AuditMarshaller) dropMessage(msg *parser.AuditMessageGroup) bool {
+	return a.filterBySyscallAndType(msg) || a.filterByRuleKey(msg)
+}
+
+func (a *AuditMarshaller) filterBySyscallAndType(msg *parser.AuditMessageGroup) bool {
 	filters, ok := a.filters[msg.Syscall]
 	if !ok {
 		return false
@@ -142,6 +155,27 @@ func (a *AuditMarshaller) dropMessage(msg *parser.AuditMessageGroup) bool {
 
 	for _, msg := range msg.Msgs {
 		if fg, ok := filters[msg.Type]; ok {
+			for _, filter := range fg {
+				if filter.MatchString(msg.Data) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func (a *AuditMarshaller) filterByRuleKey(msg *parser.AuditMessageGroup) bool {
+	filters, ok := a.filters[msg.RuleKey]
+	if !ok {
+		// no filter found for message group or rule key move on
+		return false
+	}
+
+	for _, msg := range msg.Msgs {
+		// these are indexed in at 0 as we dont use the message type
+		if fg, ok := filters[0]; ok {
 			for _, filter := range fg {
 				if filter.MatchString(msg.Data) {
 					return true
