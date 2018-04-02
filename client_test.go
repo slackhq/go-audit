@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/slackhq/go-audit/pkg/slog"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"github.com/stretchr/testify/assert"
 )
 

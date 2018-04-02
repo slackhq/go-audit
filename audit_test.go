@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/pantheon-systems/go-audit/pkg/marshaller"
 	"github.com/pantheon-systems/go-audit/pkg/output"
 	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"github.com/spf13/viper"
@@ -213,6 +214,15 @@ func Test_createFilters(t *testing.T) {
 	assert.EqualError(t, err, "`syscall` in filter 1 could not be parsed; Value: `[]`")
 	assert.Empty(t, f)
 
+	// Bad key - not string
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"key": []string{}})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "`key` in filter 1 could not be parsed; Value: `[]`")
+	assert.Empty(t, f)
+
 	// Missing regex
 	c = viper.New()
 	rf = make([]interface{}, 0)
@@ -231,7 +241,7 @@ func Test_createFilters(t *testing.T) {
 	assert.EqualError(t, err, "Filter 1 is missing the `message_type` entry")
 	assert.Empty(t, f)
 
-	// Missing message_type
+	// Missing syscall and not a rule key filter (message type is set)
 	c = viper.New()
 	rf = make([]interface{}, 0)
 	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1"})
@@ -240,7 +250,16 @@ func Test_createFilters(t *testing.T) {
 	assert.EqualError(t, err, "Filter 1 is missing the `syscall` entry")
 	assert.Empty(t, f)
 
-	// Good with strings
+	// Missing syscall and missing key and missing message type
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"regex": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.EqualError(t, err, "Filter 1 is missing either the `key` entry or `syscall` and `message_type` entry")
+	assert.Empty(t, f)
+
+	// Good with strings (Syscall Filter)
 	c = viper.New()
 	rf = make([]interface{}, 0)
 	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1", "syscall": "1"})
@@ -248,13 +267,13 @@ func Test_createFilters(t *testing.T) {
 	f, err = createFilters(c)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
-	assert.Equal(t, "1", f[0].syscall)
-	assert.Equal(t, uint16(1), f[0].messageType)
-	assert.Equal(t, "1", f[0].regex.String())
+	assert.Equal(t, "1", f[0].Syscall)
+	assert.Equal(t, uint16(1), f[0].MessageType)
+	assert.Equal(t, "1", f[0].Regex.String())
 	assert.Empty(t, elb.String())
 	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
 
-	// Good with ints
+	// Good with ints (Syscall Filter)
 	lb.Reset()
 	elb.Reset()
 	c = viper.New()
@@ -264,15 +283,33 @@ func Test_createFilters(t *testing.T) {
 	f, err = createFilters(c)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
-	assert.Equal(t, "1", f[0].syscall)
-	assert.Equal(t, uint16(1), f[0].messageType)
-	assert.Equal(t, "1", f[0].regex.String())
+	assert.Equal(t, "1", f[0].Syscall)
+	assert.Equal(t, uint16(1), f[0].MessageType)
+	assert.Equal(t, "1", f[0].Regex.String())
 	assert.Empty(t, elb.String())
 	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
+
+	// Good with strings (RuleKey Filter)
+	lb.Reset()
+	elb.Reset()
+	c = viper.New()
+	rf = make([]interface{}, 0)
+	rf = append(rf, map[interface{}]interface{}{"key": "testkey", "regex": "1"})
+	c.Set("filters", rf)
+	f, err = createFilters(c)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, f)
+	assert.Equal(t, "", f[0].Syscall)
+	assert.Equal(t, uint16(0), f[0].MessageType)
+	assert.Equal(t, "1", f[0].Regex.String())
+	assert.Equal(t, "testkey", f[0].Key)
+	assert.Empty(t, elb.String())
+	assert.Equal(t, "Ignoring messages with key `testkey` matching string `1`\n", lb.String())
+
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
-	marshaller := NewAuditMarshaller(output.NewAuditWriter(&noopWriter{}, 1), uint16(1300), uint16(1399), false, false, 1, []AuditFilter{})
+	marshaller := marshaller.NewAuditMarshaller(output.NewAuditWriter(&noopWriter{}, 1), uint16(1300), uint16(1399), false, false, 1, []marshaller.AuditFilter{})
 
 	data := make([][]byte, 6)
 

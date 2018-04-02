@@ -7,8 +7,6 @@ import (
 	"log/syslog"
 	"os"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/pantheon-systems/go-audit/pkg/marshaller"
@@ -103,12 +101,11 @@ func createOutput(config *viper.Viper) (*output.AuditWriter, error) {
 	return writer, nil
 }
 
-func createFilters(config *viper.Viper) ([]AuditFilter, error) {
-	var err error
+func createFilters(config *viper.Viper) ([]marshaller.AuditFilter, error) {
 	var ok bool
 
 	fs := config.Get("filters")
-	filters := []AuditFilter{}
+	filters := []marshaller.AuditFilter{}
 
 	if fs == nil {
 		return filters, nil
@@ -124,73 +121,11 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 		if !ok {
 			return filters, fmt.Errorf("Could not parse filter %d; '%+v'", i+1, f)
 		}
-
-		af := AuditFilter{}
-		for k, v := range f2 {
-			switch k {
-			case "message_type":
-				if ev, ok := v.(string); ok {
-					fv, err := strconv.ParseUint(ev, 10, 64)
-					if err != nil {
-						return filters, fmt.Errorf("`message_type` in filter %d could not be parsed; Value: `%+v`; Error: %s", i+1, v, err)
-					}
-					af.messageType = uint16(fv)
-
-				} else if ev, ok := v.(int); ok {
-					af.messageType = uint16(ev)
-
-				} else {
-					return filters, fmt.Errorf("`message_type` in filter %d could not be parsed; Value: `%+v`", i+1, v)
-				}
-
-			case "regex":
-				re, ok := v.(string)
-				if !ok {
-					return filters, fmt.Errorf("`regex` in filter %d could not be parsed; Value: `%+v`", i+1, v)
-				}
-
-				if af.regex, err = regexp.Compile(re); err != nil {
-					return filters, fmt.Errorf("`regex` in filter %d could not be parsed; Value: `%+v`; Error: %s", i+1, v, err)
-				}
-
-			case "syscall":
-				if af.syscall, ok = v.(string); ok {
-					// All is good
-				} else if ev, ok := v.(int); ok {
-					af.syscall = strconv.Itoa(ev)
-				} else {
-					return filters, fmt.Errorf("`syscall` in filter %d could not be parsed; Value: `%+v`", i+1, v)
-				}
-			case "key":
-				if af.key, ok = v.(string); !ok {
-					return filters, fmt.Errorf("`key` in filter %d could not be parsed; Value: `%+v`", i+1, v)
-				}
-			}
+		af, err := marshaller.NewAuditFilter(i+1, f2)
+		if err != nil {
+			return filters, err
 		}
-
-		if af.regex == nil {
-			return filters, fmt.Errorf("Filter %d is missing the `regex` entry", i+1)
-		}
-
-		logMsg := fmt.Sprintf("Ignoring messages with key `%s` matching string `%s`\n", af.key, af.regex.String())
-		if af.key == "" {
-			if af.syscall == "" && af.messageType == 0 {
-				return filters, fmt.Errorf("Filter %d is missing either the `key` entry or `syscall` and `message_type` entry", i+1)
-			}
-
-			if af.syscall == "" {
-				return filters, fmt.Errorf("Filter %d is missing the `syscall` entry", i+1)
-			}
-
-			if af.messageType == 0 {
-				return filters, fmt.Errorf("Filter %d is missing the `message_type` entry", i+1)
-			}
-
-			logMsg = fmt.Sprintf("Ignoring syscall `%v` containing message type `%v` matching string `%s`\n", af.syscall, af.messageType, af.regex.String())
-		}
-		slog.Info.Print(logMsg)
-
-		filters = append(filters, af)
+		filters = append(filters, *af)
 	}
 
 	return filters, nil

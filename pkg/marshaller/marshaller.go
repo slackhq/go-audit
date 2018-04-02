@@ -30,13 +30,6 @@ type AuditMarshaller struct {
 	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
 }
 
-type AuditFilter struct {
-	messageType uint16
-	regex       *regexp.Regexp
-	syscall     string
-	key         string
-}
-
 // Create a new marshaller
 func NewAuditMarshaller(w *output.AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
@@ -52,9 +45,9 @@ func NewAuditMarshaller(w *output.AuditWriter, eventMin uint16, eventMax uint16,
 	}
 
 	for _, filter := range filters {
-		primaryKey := filter.syscall
+		primaryKey := filter.Syscall
 		if primaryKey == "" {
-			primaryKey = filter.key
+			primaryKey = filter.Key
 		}
 
 		if _, ok := am.filters[primaryKey]; !ok {
@@ -64,11 +57,11 @@ func NewAuditMarshaller(w *output.AuditWriter, eventMin uint16, eventMax uint16,
 		// if we are doing a key filter then the messageType will be 0 as it is the golang default
 		// value. This means that all key filters (vs syscall,messageType filters) are stored
 		// in [key][0] => []*regex.Regexp
-		if _, ok := am.filters[primaryKey][filter.messageType]; !ok {
-			am.filters[primaryKey][filter.messageType] = []*regexp.Regexp{}
+		if _, ok := am.filters[primaryKey][filter.MessageType]; !ok {
+			am.filters[primaryKey][filter.MessageType] = []*regexp.Regexp{}
 		}
 
-		am.filters[primaryKey][filter.messageType] = append(am.filters[primaryKey][filter.messageType], filter.regex)
+		am.filters[primaryKey][filter.MessageType] = append(am.filters[primaryKey][filter.MessageType], filter.Regex)
 	}
 
 	return &am
