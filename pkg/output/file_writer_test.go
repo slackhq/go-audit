@@ -92,10 +92,10 @@ func Test_newFileWriter(t *testing.T) {
 }
 
 func Test_fileRotation(t *testing.T) {
-	uid = os.Getuid()
-	gid = os.Getgid()
-	u, _ = user.LookupId(strconv.Itoa(uid))
-	g, _ = user.LookupGroupId(strconv.Itoa(gid))
+	uid := os.Getuid()
+	gid := os.Getgid()
+	u, _ := user.LookupId(strconv.Itoa(uid))
+	g, _ := user.LookupGroupId(strconv.Itoa(gid))
 
 	// travis-ci is silly
 	if u.Username == "" {
@@ -104,7 +104,7 @@ func Test_fileRotation(t *testing.T) {
 
 	// File rotation
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
-	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
+	_, err := os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.True(t, os.IsNotExist(err))
 	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 	time.Sleep(100 * time.Millisecond)
