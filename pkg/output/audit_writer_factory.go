@@ -1,7 +1,6 @@
 package output
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// AuditWriterFactory is the that represents a function that is a audit writer factory
 type AuditWriterFactory func(conf *viper.Viper) (*AuditWriter, error)
 
 var auditWriterFactories = make(map[string]AuditWriterFactory)
@@ -39,7 +39,7 @@ func CreateAuditWriter(auditWriterName string, config *viper.Viper) (*AuditWrite
 	auditWriterFactory, ok := auditWriterFactories[auditWriterName]
 	if !ok {
 		availableAuditWriters := GetAvailableAuditWriters()
-		return nil, errors.New(fmt.Sprintf("Invalid audit writer name. Must be one of: %s", strings.Join(availableAuditWriters, ", ")))
+		return nil, fmt.Errorf("Invalid audit writer name. Must be one of: %s", strings.Join(availableAuditWriters, ", "))
 	}
 
 	// Run the factory with the configuration.
@@ -49,7 +49,7 @@ func CreateAuditWriter(auditWriterName string, config *viper.Viper) (*AuditWrite
 // GetAvailableAuditWriters returns an array of audit writer names as strings
 func GetAvailableAuditWriters() []string {
 	availableAuditWriters := make([]string, len(auditWriterFactories))
-	for k, _ := range auditWriterFactories {
+	for k := range auditWriterFactories {
 		availableAuditWriters = append(availableAuditWriters, k)
 	}
 	return availableAuditWriters

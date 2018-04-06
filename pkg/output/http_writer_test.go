@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ func TestHTTPWriter_newHttpWriter(t *testing.T) {
 }
 
 func TestHTTPWriter_write(t *testing.T) {
-	msgChannel := make(chan []byte, 1)
+	msgChannel := make(chan *[]byte, 1)
 	writer := &HTTPWriter{
 		messages: msgChannel,
 	}
@@ -81,7 +82,7 @@ func TestHTTPWriter_write(t *testing.T) {
 	assert.Equal(t, len(msg), result)
 
 	resultMsg := <-msgChannel
-	assert.Equal(t, "test string", string(resultMsg))
+	assert.Equal(t, "test string", string(*resultMsg))
 }
 
 func TestHTTPWriter_process(t *testing.T) {
@@ -101,7 +102,7 @@ func TestHTTPWriter_process(t *testing.T) {
 		http.ListenAndServe(":8888", nil)
 	}()
 
-	msgChannel := make(chan []byte, 1)
+	msgChannel := make(chan *[]byte, 1)
 	msg := []byte("test string")
 	writer := &HTTPWriter{
 		url:      "http://localhost:8888",
@@ -109,12 +110,28 @@ func TestHTTPWriter_process(t *testing.T) {
 		messages: msgChannel,
 	}
 
-	msgChannel <- msg
+	msgChannel <- &msg
 	go writer.Process(context.Background())
 
-	wg.Wait()
+	if waitTimeout(wg, 15*time.Second) {
+		assert.FailNow(t, "Did not recieve call to test service within timeout")
+	}
 
 	assert.True(t, receivedPost)
 	assert.Equal(t, int64(11), byteCount)
 	assert.Equal(t, msg, body)
+}
+
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
 }

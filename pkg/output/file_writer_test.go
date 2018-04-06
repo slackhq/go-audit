@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	//"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -77,21 +78,9 @@ func Test_newFileWriter(t *testing.T) {
 	w, err = newFileWriter(c)
 	assert.EqualError(t, err, "Could not chown output file. Error: chown /tmp/go-audit.test.log: operation not permitted")
 	assert.Nil(t, w)
-
-	// All good
-	c = viper.New()
-	c.Set("output.file.attempts", 1)
-	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
-	c.Set("output.file.mode", 0644)
-	c.Set("output.file.user", u.Username)
-	c.Set("output.file.group", g.Name)
-	w, err = newFileWriter(c)
-	assert.Nil(t, err)
-	assert.NotNil(t, w)
-	assert.IsType(t, &os.File{}, w.w)
 }
 
-func Test_fileRotation(t *testing.T) {
+func Test_fileRotationAllGoodFile(t *testing.T) {
 	uid := os.Getuid()
 	gid := os.Getgid()
 	u, _ := user.LookupId(strconv.Itoa(uid))
@@ -102,12 +91,24 @@ func Test_fileRotation(t *testing.T) {
 		u.Username = g.Name
 	}
 
+	// all good file
+	c := viper.New()
+	c.Set("output.file.attempts", 1)
+	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
+	c.Set("output.file.mode", 0644)
+	c.Set("output.file.user", u.Username)
+	c.Set("output.file.group", g.Name)
+	w, err := newFileWriter(c)
+	assert.Nil(t, err)
+	assert.NotNil(t, w)
+	assert.IsType(t, &os.File{}, w.w)
+
 	// File rotation
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
-	_, err := os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
+	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.True(t, os.IsNotExist(err))
 	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.Nil(t, err)
 }

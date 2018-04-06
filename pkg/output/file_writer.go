@@ -3,9 +3,12 @@ package output
 import (
 	"errors"
 	"fmt"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"os"
+	"os/signal"
 	"os/user"
 	"strconv"
+	"syscall"
 
 	"github.com/spf13/viper"
 )
@@ -64,5 +67,30 @@ func newFileWriter(config *viper.Viper) (*AuditWriter, error) {
 		return nil, fmt.Errorf("Could not chown output file. Error: %s", err)
 	}
 
-	return NewAuditWriter(f, attempts), nil
+	writer := NewAuditWriter(f, attempts)
+	go handleLogRotation(config, writer)
+	return writer, nil
+}
+
+func handleLogRotation(config *viper.Viper, writer *AuditWriter) {
+	// Re-open our log file. This is triggered by a USR1 signal and is meant to be used upon log rotation
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGUSR1)
+
+	for range sigc {
+		slog.Info.Print("got here")
+		newWriter, err := newFileWriter(config)
+		if err != nil {
+			slog.Error.Fatalln("Error re-opening log file. Exiting.")
+		}
+
+		oldFile := writer.w.(*os.File)
+		writer.w = newWriter.w
+		writer.e = newWriter.e
+
+		err = oldFile.Close()
+		if err != nil {
+			slog.Error.Printf("Error closing old log file: %+v\n", err)
+		}
+	}
 }

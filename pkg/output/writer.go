@@ -9,12 +9,14 @@ import (
 	"github.com/pantheon-systems/go-audit/pkg/slog"
 )
 
+// AuditWriter is the class that encapsulates the io.Writer for output
 type AuditWriter struct {
 	e        *json.Encoder
 	w        io.Writer
 	attempts int
 }
 
+// NewAuditWriter creates a generic auditwriter which encapsulates a io.Writer
 func NewAuditWriter(w io.Writer, attempts int) *AuditWriter {
 	return &AuditWriter{
 		e:        json.NewEncoder(w),
