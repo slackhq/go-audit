@@ -78,7 +78,6 @@ func handleLogRotation(config *viper.Viper, writer *AuditWriter) {
 	signal.Notify(sigc, syscall.SIGUSR1)
 
 	for range sigc {
-		slog.Info.Print("got here")
 		newWriter, err := newFileWriter(config)
 		if err != nil {
 			slog.Error.Fatalln("Error re-opening log file. Exiting.")

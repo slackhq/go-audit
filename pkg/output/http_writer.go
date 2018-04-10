@@ -6,15 +6,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
 	"sync"
-
-	"github.com/prometheus/common/log"
-	"github.com/spf13/viper"
 )
 
 // TODO: where do we close the channel, how do we gracefully stop when the cancel has been thrown
@@ -49,11 +48,11 @@ func (w *HTTPWriter) Write(p []byte) (n int, err error) {
 		if r := recover(); r != nil {
 			_, ok := r.(error)
 			if !ok {
-				log.Errorf("pkg: %v", r)
+				slog.Error.Printf("pkg: %v", r)
 			}
-			log.Info("Waiting for goroutines to complete")
+			slog.Info.Print("Waiting for goroutines to complete")
 			w.wg.Wait()
-			log.Info("Goroutines completed")
+			slog.Info.Print("Goroutines completed")
 			os.Exit(0)
 		}
 	}()
@@ -62,7 +61,7 @@ func (w *HTTPWriter) Write(p []byte) (n int, err error) {
 	select {
 	case w.messages <- &p:
 	default:
-		log.Error("Buffer full or closed, messages dropped")
+		slog.Error.Printf("Buffer full or closed, messages dropped")
 	}
 
 	return bytesSent, nil
@@ -88,13 +87,13 @@ func (w *HTTPWriter) Process(ctx context.Context) {
 
 			req, err := http.NewRequest(http.MethodPost, w.url, payloadReader)
 			if err != nil {
-				log.Errorf("HTTPWriter.Process could not create new request: %s", err.Error())
+				slog.Error.Printf("HTTPWriter.Process could not create new request: %s", err.Error())
 				continue
 			}
 
 			resp, err := w.client.Do(req.WithContext(ctx))
 			if err != nil {
-				log.Errorf("HTTPWriter.Process could not send request: %s", err.Error())
+				slog.Error.Printf("HTTPWriter.Process could not send request: %s", err.Error())
 				continue
 			}
 			resp.Body.Close()
@@ -133,17 +132,18 @@ func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 }
 
 func createHTTPWriter(httpClient *http.Client, bufferSize, workerCount int, serviceURL string) (*HTTPWriter, error) {
-	if bufferSize < workerCount {
-		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
+	if serviceURL == "" {
+		return nil, fmt.Errorf("Output http URL must be set")
 	}
 
 	if workerCount < 1 {
 		return nil, fmt.Errorf("Output workers for http must be at least 1, %v provided", workerCount)
 	}
 
-	if serviceURL == "" {
-		return nil, fmt.Errorf("Output http URL must be set")
+	if bufferSize < workerCount {
+		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
 	}
+
 	queue := make(chan *[]byte, bufferSize)
 
 	ctx, cancel := context.WithCancel(context.Background())

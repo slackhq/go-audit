@@ -55,6 +55,7 @@ func newNotificationServiceWriter(config *viper.Viper) (*AuditWriter, error) {
 func (w *NotificationServiceWriter) bodyTranformer(auditMessage *[]byte) *[]byte {
 	matches := ruleKeyRegex.FindStringSubmatch(string(*auditMessage))
 	if len(matches) < 2 || matches[1] == "" {
+		// not what we are looking for skip
 		return nil
 	}
 

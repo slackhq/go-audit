@@ -42,6 +42,7 @@ func TestHTTPWriter_newHttpWriter(t *testing.T) {
 	c.Set("output.http.url", "http://someurl.com")
 	c.Set("output.http.attempts", 1)
 	c.Set("output.http.worker_count", 2)
+	c.Set("output.http.buffer_size", 4)
 	c.Set("output.http.ssl", false)
 	w, err = newHTTPWriter(c)
 	assert.Nil(t, err)
@@ -53,6 +54,7 @@ func TestHTTPWriter_newHttpWriter(t *testing.T) {
 	c.Set("output.http.url", "http://someurl.com")
 	c.Set("output.http.attempts", 1)
 	c.Set("output.http.worker_count", 2)
+	c.Set("output.http.buffer_size", 4)
 	w, err = newHTTPWriter(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
@@ -65,6 +67,7 @@ func TestHTTPWriter_newHttpWriter(t *testing.T) {
 	c.Set("output.http.attempts", 1)
 	c.Set("output.http.worker_count", 2)
 	c.Set("output.http.ssl", true)
+	c.Set("output.http.buffer_size", 4)
 	w, err = newHTTPWriter(c)
 	assert.EqualError(t, err, "SSL is enabled, please specify the required certificates (client_cert, client_key, ca_cert)")
 	assert.Nil(t, w)
@@ -108,6 +111,9 @@ func TestHTTPWriter_process(t *testing.T) {
 		url:      "http://localhost:8888",
 		client:   &http.Client{},
 		messages: msgChannel,
+		responseBodyTranformer: func(auditMessage *[]byte) *[]byte {
+			return auditMessage
+		},
 	}
 
 	msgChannel <- &msg
