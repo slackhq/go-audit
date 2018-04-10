@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,11 +21,12 @@ import (
 
 // HTTPWriter is the class that encapsulates the http output plugin
 type HTTPWriter struct {
-	url      string
-	messages chan *[]byte
-	client   *http.Client
-	hostname string
-	wg       *sync.WaitGroup
+	url                    string
+	messages               chan *[]byte
+	client                 *http.Client
+	hostname               string
+	wg                     *sync.WaitGroup
+	responseBodyTranformer func(*[]byte) *[]byte
 }
 
 type notification struct {
@@ -80,7 +80,7 @@ func (w *HTTPWriter) Process(ctx context.Context) {
 				continue
 			}
 
-			body := w.buildAPIObject(p)
+			body := w.responseBodyTranformer(p)
 			if body == nil {
 				continue
 			}
@@ -102,29 +102,6 @@ func (w *HTTPWriter) Process(ctx context.Context) {
 	}
 }
 
-func (w *HTTPWriter) buildAPIObject(auditMessage *[]byte) *[]byte {
-	matches := ruleKeyRegex.FindStringSubmatch(string(*auditMessage))
-	if len(matches) < 2 || matches[1] == "" {
-		return nil
-	}
-
-	notif := notification{
-		Topic: matches[1],
-		Data:  string(*auditMessage),
-		Attributes: map[string]string{
-			"hostname": w.hostname,
-		},
-		Version: "1.0.0",
-	}
-
-	body, err := json.Marshal(notif)
-	if err != nil {
-		return nil
-	}
-
-	return &body
-}
-
 func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 	var err error
 
@@ -134,34 +111,39 @@ func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 	}
 
 	serviceURL := config.GetString("output.http.url")
-	if serviceURL == "" {
-		return nil, fmt.Errorf("Output http URL must be set")
-	}
-
 	workerCount := config.GetInt("output.http.worker_count")
-	if workerCount < 1 {
-		return nil, fmt.Errorf("Output workers for http must be at least 1, %v provided", workerCount)
-	}
-
 	bufferSize := config.GetInt("output.http.buffer_size")
-	if bufferSize < workerCount {
-		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
-	}
 
 	var httpClient = &http.Client{}
 	if config.IsSet("output.http.ssl") && config.GetBool("output.http.ssl") {
 		clientCertPath := config.GetString("output.http.client_cert")
 		clientKeyPath := config.GetString("output.http.client_key")
 		caCertPath := config.GetString("output.http.ca_cert")
-		if clientCertPath == "" || clientKeyPath == "" || caCertPath == "" {
-			return nil, fmt.Errorf("SSL is enabled, please specify the required certificates (client_cert, client_key, ca_cert)")
-		}
 		httpClient, err = createSSLClient(clientCertPath, clientKeyPath, caCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	writer, err := createHTTPWriter(httpClient, bufferSize, workerCount, serviceURL)
+	if err != nil {
+		return nil, err
+	}
+	return NewAuditWriter(writer, attempts), nil
+}
+
+func createHTTPWriter(httpClient *http.Client, bufferSize, workerCount int, serviceURL string) (*HTTPWriter, error) {
+	if bufferSize < workerCount {
+		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
+	}
+
+	if workerCount < 1 {
+		return nil, fmt.Errorf("Output workers for http must be at least 1, %v provided", workerCount)
+	}
+
+	if serviceURL == "" {
+		return nil, fmt.Errorf("Output http URL must be set")
+	}
 	queue := make(chan *[]byte, bufferSize)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -190,13 +172,17 @@ func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 		client:   httpClient,
 		hostname: host,
 		wg:       wg,
+		responseBodyTranformer: func(auditMessage *[]byte) *[]byte {
+			// The default responseBodyTranformer does nothing (noop)
+			return auditMessage
+		},
 	}
 
 	for i := 0; i < workerCount; i++ {
 		go writer.Process(ctx)
 	}
 
-	return NewAuditWriter(writer, attempts), nil
+	return writer, nil
 }
 
 func sslHTTPClient(cert *tls.Certificate, caCertPool *x509.CertPool) *http.Client {
@@ -209,6 +195,9 @@ func sslHTTPClient(cert *tls.Certificate, caCertPool *x509.CertPool) *http.Clien
 }
 
 func createSSLClient(clientCertPath, clientKeyPath, caCertPath string) (*http.Client, error) {
+	if clientCertPath == "" || clientKeyPath == "" || caCertPath == "" {
+		return nil, fmt.Errorf("SSL is enabled, please specify the required certificates (client_cert, client_key, ca_cert)")
+	}
 	cert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
 	if err != nil {
 		return nil, err
