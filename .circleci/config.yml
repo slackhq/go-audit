@@ -20,12 +20,50 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run: go get -u github.com/kardianos/govendor
       - run: make
       - store_artifacts:
           path: /go/src/github.com/pantheon-systems/go-audit/go-audit
       - persist_to_workspace:
           root: .
           paths: go-audit
+  package-rpm:
+    docker:
+      - image: alanfranz/fpm-within-docker:centos-7
+    working_directory: ~/go-audit
+    environment:
+      CIRCLE_ARTIFACTS: /root/go-audit/artifacts
+    steps:
+      - checkout
+      - attach_workspace:
+          at: artifacts/
+      - run: make build
+      - store_artifacts:
+          path: ~/go-audit/artifacts
+      - persist_to_workspace:
+          root: .
+          paths:
+            - Makefile
+            - scripts/
+            - artifacts/
+  push-rpm-dev:
+    docker:
+      - image: circleci/ruby:2.5
+    working_directory: ~/go-audit
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make deps-circle
+      - run: make push-dev
+  push-rpm:
+    docker:
+      - image: circleci/ruby:2.5
+    working_directory: ~/go-audit
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make deps-circle
+      - run: make push
   release:
     docker:
       - image: circleci/golang:1.9

@@ -3,12 +3,13 @@ package output
 import (
 	"errors"
 	"fmt"
-	"github.com/pantheon-systems/go-audit/pkg/slog"
 	"os"
 	"os/signal"
 	"os/user"
 	"strconv"
 	"syscall"
+
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 
 	"github.com/spf13/viper"
 )

@@ -6,36 +6,27 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/pantheon-systems/go-audit/pkg/slog"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"sync"
+
+	"github.com/pantheon-systems/go-audit/pkg/output/http_transformer"
+	"github.com/pantheon-systems/go-audit/pkg/slog"
+	"github.com/spf13/viper"
 )
 
 // TODO: where do we close the channel, how do we gracefully stop when the cancel has been thrown
 
 // HTTPWriter is the class that encapsulates the http output plugin
 type HTTPWriter struct {
-	url                    string
-	messages               chan *[]byte
-	client                 *http.Client
-	hostname               string
-	wg                     *sync.WaitGroup
-	responseBodyTranformer func(*[]byte) *[]byte
+	url                     string
+	messages                chan *[]byte
+	client                  *http.Client
+	wg                      *sync.WaitGroup
+	ResponseBodyTransformer http_transformer.ResponseBodyTransformer
 }
-
-type notification struct {
-	Topic      string            `json:"topic"`
-	Attributes map[string]string `json:"attributes"`
-	Data       string            `json:"data"`
-	Version    string            `json:"version"`
-}
-
-var ruleKeyRegex = regexp.MustCompile(`"rule_key":"(.*)"`)
 
 func init() {
 	register("http", newHTTPWriter)
@@ -79,8 +70,8 @@ func (w *HTTPWriter) Process(ctx context.Context) {
 				continue
 			}
 
-			body := w.responseBodyTranformer(p)
-			if body == nil {
+			body, err := w.ResponseBodyTransformer.Transform(p)
+			if err != nil || body == nil {
 				continue
 			}
 			payloadReader := bytes.NewReader(*body)
@@ -110,8 +101,24 @@ func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 	}
 
 	serviceURL := config.GetString("output.http.url")
+	if serviceURL == "" {
+		return nil, fmt.Errorf("Output http URL must be set")
+	}
+
 	workerCount := config.GetInt("output.http.worker_count")
+	if workerCount < 1 {
+		return nil, fmt.Errorf("Output workers for http must be at least 1, %v provided", workerCount)
+	}
+
 	bufferSize := config.GetInt("output.http.buffer_size")
+	if bufferSize < workerCount {
+		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
+	}
+
+	var respBodyTransName string
+	if config.IsSet("output.http.response_body_transformer") {
+		respBodyTransName = config.GetString("output.http.response_body_transformer")
+	}
 
 	var httpClient = &http.Client{}
 	if config.IsSet("output.http.ssl") && config.GetBool("output.http.ssl") {
@@ -122,26 +129,6 @@ func newHTTPWriter(config *viper.Viper) (*AuditWriter, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	writer, err := createHTTPWriter(httpClient, bufferSize, workerCount, serviceURL)
-	if err != nil {
-		return nil, err
-	}
-	return NewAuditWriter(writer, attempts), nil
-}
-
-func createHTTPWriter(httpClient *http.Client, bufferSize, workerCount int, serviceURL string) (*HTTPWriter, error) {
-	if serviceURL == "" {
-		return nil, fmt.Errorf("Output http URL must be set")
-	}
-
-	if workerCount < 1 {
-		return nil, fmt.Errorf("Output workers for http must be at least 1, %v provided", workerCount)
-	}
-
-	if bufferSize < workerCount {
-		return nil, fmt.Errorf("Buffer size must be larger than worker count, %v provided", bufferSize)
 	}
 
 	queue := make(chan *[]byte, bufferSize)
@@ -158,11 +145,6 @@ func createHTTPWriter(httpClient *http.Client, bufferSize, workerCount int, serv
 		}
 	}()
 
-	host, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-
 	wg := &sync.WaitGroup{}
 	wg.Add(workerCount)
 
@@ -170,19 +152,15 @@ func createHTTPWriter(httpClient *http.Client, bufferSize, workerCount int, serv
 		url:      serviceURL,
 		messages: queue,
 		client:   httpClient,
-		hostname: host,
 		wg:       wg,
-		responseBodyTranformer: func(auditMessage *[]byte) *[]byte {
-			// The default responseBodyTranformer does nothing (noop)
-			return auditMessage
-		},
+		ResponseBodyTransformer: http_transformer.GetResponseBodyTransformer(respBodyTransName),
 	}
 
 	for i := 0; i < workerCount; i++ {
 		go writer.Process(ctx)
 	}
 
-	return writer, nil
+	return NewAuditWriter(writer, attempts), nil
 }
 
 func sslHTTPClient(cert *tls.Certificate, caCertPool *x509.CertPool) *http.Client {

@@ -12,6 +12,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var transformerFunctionWasCalled = false
+
+type TestTransformer struct {
+}
+
+func (t TestTransformer) Transform(body *[]byte) (*[]byte, error) {
+	transformerFunctionWasCalled = true
+	return body, nil
+}
+
 func TestHTTPWriter_newHttpWriter(t *testing.T) {
 	// attempts error
 	c := viper.New()
@@ -105,15 +115,15 @@ func TestHTTPWriter_process(t *testing.T) {
 		http.ListenAndServe(":8888", nil)
 	}()
 
+	testTransformer := TestTransformer{}
+
 	msgChannel := make(chan *[]byte, 1)
 	msg := []byte("test string")
 	writer := &HTTPWriter{
-		url:      "http://localhost:8888",
-		client:   &http.Client{},
-		messages: msgChannel,
-		responseBodyTranformer: func(auditMessage *[]byte) *[]byte {
-			return auditMessage
-		},
+		url:                     "http://localhost:8888",
+		client:                  &http.Client{},
+		messages:                msgChannel,
+		ResponseBodyTransformer: testTransformer,
 	}
 
 	msgChannel <- &msg
@@ -123,6 +133,7 @@ func TestHTTPWriter_process(t *testing.T) {
 		assert.FailNow(t, "Did not recieve call to test service within timeout")
 	}
 
+	assert.True(t, transformerFunctionWasCalled)
 	assert.True(t, receivedPost)
 	assert.Equal(t, int64(11), byteCount)
 	assert.Equal(t, msg, body)

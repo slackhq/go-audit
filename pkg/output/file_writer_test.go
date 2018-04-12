@@ -103,12 +103,17 @@ func Test_fileRotationAllGoodFile(t *testing.T) {
 	assert.NotNil(t, w)
 	assert.IsType(t, &os.File{}, w.w)
 
+	// we must wait for the log rotation method to listen
+	// for the signal, without this timeout we send the syscall.Kill
+	// to the goroutine and nothing will be listening yet
+	time.Sleep(10 * time.Millisecond)
+
 	// File rotation
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
 	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.True(t, os.IsNotExist(err))
 	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.Nil(t, err)
 }
