@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"syscall"
 	"time"
-	"fmt"
+
+	"github.com/pantheon-systems/go-audit/pkg/slog"
 )
 
 // Endianness is an alias for what we assume is the current machine endianness
@@ -63,13 +65,13 @@ func NewNetlinkClient(recvSize int) (*NetlinkClient, error) {
 	// Set the buffer size if we were asked
 	if recvSize > 0 {
 		if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, recvSize); err != nil {
-			el.Println("Failed to set receive buffer size")
+			slog.Error.Println("Failed to set receive buffer size")
 		}
 	}
 
 	// Print the current receive buffer size
 	if v, err := syscall.GetsockoptInt(n.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF); err == nil {
-		l.Println("Socket receive buffer size:", v)
+		slog.Info.Println("Socket receive buffer size:", v)
 	}
 
 	go func() {
@@ -151,6 +153,6 @@ func (n *NetlinkClient) KeepConnection() {
 
 	err := n.Send(packet, payload)
 	if err != nil {
-		el.Println("Error occurred while trying to keep the connection:", err)
+		slog.Error.Println("Error occurred while trying to keep the connection:", err)
 	}
 }
