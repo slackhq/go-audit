@@ -37,14 +37,14 @@ jobs:
       - checkout
       - attach_workspace:
           at: artifacts/
-      - run: make build
+      - run: make build-rpm
       - store_artifacts:
           path: ~/go-audit/artifacts
       - persist_to_workspace:
           root: .
           paths:
             - Makefile
-            - scripts/
+            - .circleci/
             - artifacts/
   push-rpm-dev:
     docker:
@@ -54,7 +54,7 @@ jobs:
       - attach_workspace:
           at: .
       - run: make deps-circle
-      - run: make push-dev
+      - run: make push-dev-rpm
   push-rpm:
     docker:
       - image: circleci/ruby:2.5
@@ -63,14 +63,7 @@ jobs:
       - attach_workspace:
           at: .
       - run: make deps-circle
-      - run: make push
-  release:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: ~/go-audit-release
-    steps:
-      - run: make deps-release
-      - run: make release
+      - run: make push-rpm
 
 workflows:
   version: 2
@@ -80,11 +73,22 @@ workflows:
       - build:
           requires:
             - test
-      - release:
+      - package-rpm:
           requires:
-            - test
             - build
+      - push-rpm:
+          requires:
+            - build
+            - package-rpm
           filters:
             branches:
               only:
                 - master
+      - push-rpm-dev:
+          requires:
+            - build
+            - package-rpm
+          filters:
+            branches:
+              only:
+                - /^(?!master$).*$/  # not the master branch
