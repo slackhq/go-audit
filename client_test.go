@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/pantheon-systems/go-audit/pkg/slog"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
@@ -146,16 +148,16 @@ func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload 
 
 // Resets global loggers
 func resetLogger() {
-	l.SetOutput(os.Stdout)
-	el.SetOutput(os.Stderr)
+	slog.Info.SetOutput(os.Stdout)
+	slog.Error.SetOutput(os.Stderr)
 }
 
 // Hooks the global loggers writers so you can assert their contents
 func hookLogger() (lb *bytes.Buffer, elb *bytes.Buffer) {
 	lb = &bytes.Buffer{}
-	l.SetOutput(lb)
+	slog.Info.SetOutput(lb)
 
 	elb = &bytes.Buffer{}
-	el.SetOutput(elb)
+	slog.Error.SetOutput(elb)
 	return
 }

@@ -1,10 +1,11 @@
-package main
+package parser
 
 import (
-	"github.com/stretchr/testify/assert"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuditConstants(t *testing.T) {
@@ -23,14 +24,14 @@ func TestNewAuditMessage(t *testing.T) {
 			Seq:   uint32(0),
 			Pid:   uint32(0),
 		},
-		Data: []byte("audit(10000001:99): hi there"),
+		Data: []byte("audit(10000001:99): key=testkey hi there"),
 	}
 
 	am := NewAuditMessage(msg)
 	assert.Equal(t, uint16(1309), am.Type)
 	assert.Equal(t, 99, am.Seq)
 	assert.Equal(t, "10000001", am.AuditTime)
-	assert.Equal(t, "hi there", am.Data)
+	assert.Equal(t, "key=testkey hi there", am.Data)
 }
 
 func TestAuditMessageGroup_AddMessage(t *testing.T) {
@@ -41,18 +42,20 @@ func TestAuditMessageGroup_AddMessage(t *testing.T) {
 	amg := &AuditMessageGroup{
 		Seq:           1,
 		AuditTime:     "ok",
+		RuleKey:       "testkey",
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2),
 	}
 
 	m := &AuditMessage{
-		Data: "uid=0 things notuid=nopethisisnot",
+		Data: "uid=0 key=testkey things notuid=nopethisisnot",
 	}
 
 	amg.AddMessage(m)
 	assert.Equal(t, 1, len(amg.Msgs), "Expected 1 message")
 	assert.Equal(t, m, amg.Msgs[0], "First message was wrong")
 	assert.Equal(t, 1, len(amg.UidMap), "Incorrect uid mapping count")
+	assert.Equal(t, "testkey", amg.RuleKey, "Testkey did not get set")
 	assert.Equal(t, "hi", amg.UidMap["0"])
 
 	// Make sure we don't parse uids for message types that don't have them
@@ -81,12 +84,13 @@ func TestNewAuditMessageGroup(t *testing.T) {
 		Type:      uint16(1300),
 		Seq:       1019,
 		AuditTime: "9919",
-		Data:      "Stuff is here",
+		Data:      "key=testkey Stuff is here",
 	}
 
 	amg := NewAuditMessageGroup(m)
 	assert.Equal(t, 1019, amg.Seq)
 	assert.Equal(t, "9919", amg.AuditTime)
+	assert.Equal(t, "testkey", amg.RuleKey)
 	assert.True(t, amg.CompleteAfter.After(time.Now()), "Complete after time should be greater than right now")
 	assert.Equal(t, 6, cap(amg.Msgs), "Msgs capacity should be 6")
 	assert.Equal(t, 1, len(amg.Msgs), "Msgs should only have 1 message")
@@ -128,7 +132,7 @@ func TestAuditMessageGroup_mapUids(t *testing.T) {
 	}
 
 	m := &AuditMessage{
-		Data: "uid=0 1uid=1 2uid=2 3uid=3 not here 4uid=99999",
+		Data: "uid=0 1uid=1 2uid=2 3uid=3 key=testkey not here 4uid=99999",
 	}
 	amg.mapUids(m)
 
@@ -138,6 +142,19 @@ func TestAuditMessageGroup_mapUids(t *testing.T) {
 	assert.Equal(t, "fun", amg.UidMap["2"])
 	assert.Equal(t, "test", amg.UidMap["3"])
 	assert.Equal(t, "derp", amg.UidMap["99999"])
+}
+
+func TestAuditMessageGroup_findDataFiles(t *testing.T) {
+	amg := &AuditMessageGroup{}
+
+	result := amg.findDataField("testfield", 128, "uid=0 1uid=1 2uid=2 testfield=testvalue 3uid=3 not here 4uid=99999")
+	assert.Equal(t, "testvalue", result)
+
+	result = amg.findDataField("testfield", 2, "uid=0 1uid=1 2uid=2 3uid=3 not here 4uid=99999 testfield=testvalue")
+	assert.Equal(t, "", result)
+
+	result = amg.findDataField("testfield", 128, "uid=0 1uid=1 2uid=2 3uid=3 not here 4uid=99999")
+	assert.Equal(t, "", result)
 }
 
 func Benchmark_getUsername(b *testing.B) {
