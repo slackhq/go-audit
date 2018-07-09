@@ -417,15 +417,6 @@ func Test_createFilters(t *testing.T) {
 	assert.EqualError(t, err, "Filter 1 is missing the `message_type` entry")
 	assert.Empty(t, f)
 
-	// Missing message_type
-	c = viper.New()
-	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1"})
-	c.Set("filters", rf)
-	f, err = createFilters(c)
-	assert.EqualError(t, err, "Filter 1 is missing the `syscall` entry")
-	assert.Empty(t, f)
-
 	// Good with strings
 	c = viper.New()
 	rf = make([]interface{}, 0)
