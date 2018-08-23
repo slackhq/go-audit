@@ -296,10 +296,6 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 			return filters, fmt.Errorf("Filter %d is missing the `regex` entry", i+1)
 		}
 
-		if af.syscall == "" {
-			return filters, fmt.Errorf("Filter %d is missing the `syscall` entry", i+1)
-		}
-
 		if af.messageType == 0 {
 			return filters, fmt.Errorf("Filter %d is missing the `message_type` entry", i+1)
 		}
