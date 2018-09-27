@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/dnstap/golang-dnstap"
+
 	"github.com/spf13/viper"
 )
 
@@ -307,6 +309,54 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 	return filters, nil
 }
 
+func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
+	return func() dnstap.Output {
+		var o dnstap.Output
+		var err error
+		if text {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
+		} else if yaml {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+		} else {
+			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
+		}
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
+			os.Exit(1)
+		}
+
+		go o.RunOutputLoop()
+		return o
+	}
+}
+
+func outputLoop(opener func() dnstap.Output, data <-chan []byte, done chan<- struct{}) {
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
+	o := opener()
+	defer func() {
+		o.Close()
+		close(done)
+		os.Exit(0)
+	}()
+	for {
+		select {
+		case b, ok := <-data:
+			if !ok {
+				return
+			}
+			o.GetOutputChannel() <- b
+		case sig := <-sigch:
+			if sig == syscall.SIGHUP {
+				o.Close()
+				o = opener()
+				continue
+			}
+			return
+		}
+	}
+}
 func main() {
 	configFile := flag.String("config", "", "Config file location")
 
@@ -343,6 +393,21 @@ func main() {
 		el.Fatal(err)
 	}
 
+	i, err := dnstap.NewFrameStreamSockInputFromPath(config.GetString("dnstap.socket"))
+	if err != nil {
+		el.Fatal(err)
+	}
+	// Start the output loop.
+	output := make(chan []byte, 1)
+	opener := outputOpener("-", true, true)
+	outDone := make(chan struct{})
+	go outputLoop(opener, output, outDone)
+
+	// Start the output loop.
+
+	i.ReadInto(output)
+	i.Wait()
+
 	marshaller := NewAuditMarshaller(
 		writer,
 		uint16(config.GetInt("events.min")),
@@ -368,5 +433,6 @@ func main() {
 		}
 
 		marshaller.Consume(msg)
+
 	}
 }
