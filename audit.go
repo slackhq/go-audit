@@ -14,10 +14,13 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/dnstap/golang-dnstap"
-
 	"github.com/spf13/viper"
+	"net"
+	fs "github.com/farsightsec/golang-framestream"
+	"go-audit/dnstap"
+	"github.com/golang/protobuf/proto"
+
+
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -309,54 +312,33 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 	return filters, nil
 }
 
-func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
-	return func() dnstap.Output {
-		var o dnstap.Output
-		var err error
-		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
-		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
-		} else {
-			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
-		}
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
-			os.Exit(1)
-		}
-
-		go o.RunOutputLoop()
-		return o
-	}
-}
-
-func outputLoop(opener func() dnstap.Output, data <-chan []byte, done chan<- struct{}) {
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
-	o := opener()
-	defer func() {
-		o.Close()
-		close(done)
-		os.Exit(0)
-	}()
+func dnstapRead(dnstapListener net.Listener, out chan<- string) {
 	for {
-		select {
-		case b, ok := <-data:
-			if !ok {
-				return
-			}
-			o.GetOutputChannel() <- b
-		case sig := <-sigch:
-			if sig == syscall.SIGHUP {
-				o.Close()
-				o = opener()
-				continue
-			}
+		server, err := dnstapListener.Accept()
+		dec, err := fs.NewDecoder(server, &fs.DecoderOptions{
+			ContentType:   []byte("protobuf:dnstap.Dnstap"),
+			Bidirectional: true,
+		})
+		if err != nil {
+			el.Fatalf("Server decoder: %s", err)
 			return
 		}
+		frameData, err := dec.Decode()
+
+		if err != nil {
+			el.Printf("Server decode: %s", err)
+		}
+
+		m := &dnstap.Message{}
+		proto.Unmarshal(frameData, m)
+
+		//el.Printf(string(m.ResponseMessage))
+
+		out <- string(m.ResponseMessage)
 	}
+
 }
+
 func main() {
 	configFile := flag.String("config", "", "Config file location")
 
@@ -389,24 +371,25 @@ func main() {
 	}
 
 	nlClient, err := NewNetlinkClient(config.GetInt("socket_buffer.receive"))
+
+	if err != nil {
+		el.Fatal(err)
+	}
+	dnstapSock := config.GetString("dnstap.socket")
+	el.Println("dnstap.socket path: ", dnstapSock)
+
+	os.Remove(dnstapSock)
+
+	dnstapListener, err := net.Listen("unix", dnstapSock)
 	if err != nil {
 		el.Fatal(err)
 	}
 
-	i, err := dnstap.NewFrameStreamSockInputFromPath(config.GetString("dnstap.socket"))
-	if err != nil {
-		el.Fatal(err)
-	}
-	// Start the output loop.
-	output := make(chan []byte, 1)
-	opener := outputOpener("-", true, true)
-	outDone := make(chan struct{})
-	go outputLoop(opener, output, outDone)
+	out := make(chan string)
 
-	// Start the output loop.
+	go dnstapRead(dnstapListener, out)
 
-	i.ReadInto(output)
-	i.Wait()
+	fmt.Println(<-out)
 
 	marshaller := NewAuditMarshaller(
 		writer,
