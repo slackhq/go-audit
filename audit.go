@@ -360,13 +360,7 @@ func main() {
 	}
 	fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", dnstapSock)
 
-	i.ReadInto(output)
-
-	// Wait for input loop to finish.
-	i.Wait()
-	close(output)
-
-	// <-outDone
+	go i.ReadInto(output)
 
 	marshaller := NewAuditMarshaller(
 		writer,
