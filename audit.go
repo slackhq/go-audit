@@ -329,12 +329,11 @@ func dnstapRead(dnstapListener net.Listener, out chan<- string) {
 			el.Printf("Server decode: %s", err)
 		}
 
-		m := &dnstap.Message{}
+		m := &dnstap.Dnstap{}
 		proto.Unmarshal(frameData, m)
 
-		//el.Printf(string(m.ResponseMessage))
 
-		out <- string(m.ResponseMessage)
+		out <- m.Message.String()
 	}
 
 }
