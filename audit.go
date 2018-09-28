@@ -76,7 +76,6 @@ func setRules(config *viper.Viper, e executor) error {
 		}
 	} else {
 		return errors.New("No audit rules found")
-		return errors.New("No audit rules found")
 	}
 
 	return nil
@@ -367,7 +366,7 @@ func main() {
 	i.Wait()
 	close(output)
 
-	<-outDone
+	// <-outDone
 
 	marshaller := NewAuditMarshaller(
 		writer,
