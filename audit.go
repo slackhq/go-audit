@@ -15,11 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"github.com/spf13/viper"
-	"net"
-	fs "github.com/farsightsec/golang-framestream"
-	"go-audit/dnstap"
-	"github.com/golang/protobuf/proto"
-
+	"github.com/dnstap/golang-dnstap"
 
 )
 
@@ -80,6 +76,7 @@ func setRules(config *viper.Viper, e executor) error {
 			l.Printf("Added audit rule #%d\n", i+1)
 		}
 	} else {
+		return errors.New("No audit rules found")
 		return errors.New("No audit rules found")
 	}
 
@@ -312,31 +309,6 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 	return filters, nil
 }
 
-func dnstapRead(dnstapListener net.Listener, out chan<- string) {
-	for {
-		server, err := dnstapListener.Accept()
-		dec, err := fs.NewDecoder(server, &fs.DecoderOptions{
-			ContentType:   []byte("protobuf:dnstap.Dnstap"),
-			Bidirectional: true,
-		})
-		if err != nil {
-			el.Fatalf("Server decoder: %s", err)
-			return
-		}
-		frameData, err := dec.Decode()
-
-		if err != nil {
-			el.Printf("Server decode: %s", err)
-		}
-
-		m := &dnstap.Dnstap{}
-		proto.Unmarshal(frameData, m)
-
-
-		out <- m.Message.String()
-	}
-
-}
 
 func main() {
 	configFile := flag.String("config", "", "Config file location")
@@ -375,20 +347,29 @@ func main() {
 		el.Fatal(err)
 	}
 	dnstapSock := config.GetString("dnstap.socket")
-	el.Println("dnstap.socket path: ", dnstapSock)
 
-	os.Remove(dnstapSock)
+	var i dnstap.Input
 
-	dnstapListener, err := net.Listen("unix", dnstapSock)
+	// Start the output loop.
+	output := make(chan []byte, 1)
+	opener := outputOpener()
+	outDone := make(chan struct{})
+	go outputLoop(opener, output, outDone)
+
+	i, err = dnstap.NewFrameStreamSockInputFromPath(dnstapSock)
 	if err != nil {
-		el.Fatal(err)
+		fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
+		os.Exit(1)
 	}
+	fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", dnstapSock)
 
-	out := make(chan string)
+	i.ReadInto(output)
 
-	go dnstapRead(dnstapListener, out)
+	// Wait for input loop to finish.
+	i.Wait()
+	close(output)
 
-	fmt.Println(<-out)
+	<-outDone
 
 	marshaller := NewAuditMarshaller(
 		writer,
