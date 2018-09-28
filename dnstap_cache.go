@@ -1,15 +1,20 @@
 package main
 
 import (
-	"github.com/golang/protobuf/proto"
-	"os/signal"
-	"os"
-	"syscall"
 	"github.com/dnstap/golang-dnstap"
+	"github.com/golang/protobuf/proto"
 	"github.com/miekg/dns"
+	"github.com/patrickmn/go-cache"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 const outputChannelSize = 32
+const defaulTimeout = 24 * time.Hour
+
+var c = cache.New(defaulTimeout, defaulTimeout*2)
 
 type DnsOutput struct {
 	outputChannel chan []byte
@@ -43,7 +48,11 @@ func (o *DnsOutput) RunOutputLoop() {
 				} else {
 					for i, rr := range msg.Answer {
 						if msg.Answer[i].Header().Rrtype == dns.TypeA {
-							el.Println(i, msg.Answer[i].(*dns.A).A.String(), rr.Header().Name)
+							ipAddr := msg.Answer[i].(*dns.A).A.String()
+							hostname := rr.Header().Name
+							c.Set(ipAddr, hostname, defaulTimeout)
+							el.Println(c.Items())
+							// el.Println(i, msg.Answer[i].(*dns.A).A.String(), rr.Header().Name)
 						}
 					}
 				}

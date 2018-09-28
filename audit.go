@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dnstap/golang-dnstap"
+	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
 	"os"
@@ -14,9 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"github.com/spf13/viper"
-	"github.com/dnstap/golang-dnstap"
-
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -308,7 +307,6 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 
 	return filters, nil
 }
-
 
 func main() {
 	configFile := flag.String("config", "", "Config file location")
