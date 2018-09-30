@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"os/user"
 	"strconv"
 	"strings"
@@ -10,6 +12,7 @@ import (
 )
 
 var uidMap = map[string]string{}
+var DNSMap = map[string]string{}
 var headerEndChar = []byte{")"[0]}
 var headerSepChar = byte(':')
 var spaceChar = byte(' ')
@@ -33,6 +36,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
+	DNSMap        map[string]string `json:"dns_map"`
 	Syscall       string            `json:"-"`
 }
 
@@ -44,6 +48,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
+		DNSMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
 		Msgs:          make([]*AuditMessage, 0, 6),
 	}
 
@@ -90,6 +95,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
 	case 1309, 1307, 1306:
+		amg.mapDNS(am)
 		// Don't map uids here
 	case 1300:
 		amg.findSyscall(am)
@@ -97,6 +103,54 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	default:
 		amg.mapUids(am)
 	}
+}
+
+// Find all `saddr=` occurrences in a message and map to dnstap cache
+func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
+	data := am.Data
+	start := 0
+	end := 0
+
+	for {
+		if start = strings.Index(data, "saddr="); start < 0 {
+			break
+		}
+
+		// Progress the start point beyon the = sign
+		start += 6
+		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
+			// There was no ending space, maybe the uid is at the end of the line
+			end = len(data) - start
+
+			// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a uid
+			if end > 34 {
+				break
+			}
+		}
+
+		saddr := data[start : start+end]
+		// todo: check the socket family and if its ipv4
+		ipv4Hex := saddr[8:16]
+		octet, _ := hex.DecodeString(ipv4Hex)
+		ipAddr := fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
+
+		// Don't bother re-adding if the existing group already has the mapping
+		if _, ok := amg.DNSMap[ipAddr]; !ok {
+			DNSHost, ok := c.Get(ipAddr)
+			if ok {
+				amg.DNSMap[ipAddr] = DNSHost.(string)
+			}
+		}
+
+		// Find the next uid= if we have space for one
+		next := start + end + 1
+		if next >= len(data) {
+			break
+		}
+
+		data = data[next:]
+	}
+
 }
 
 // Find all `uid=` occurrences in a message and adds the username to the UidMap object
