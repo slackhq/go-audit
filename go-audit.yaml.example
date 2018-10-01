@@ -6,6 +6,10 @@ socket_buffer:
   # Maximum max is net.core.rmem_max (/proc/sys/net/core/rmem_max)
   receive: 16384
 
+# Configure dnstap socket path if available 
+dnstap:     
+  socket: /var/run/dnstap.sock
+
 events:
   # Minimum event type to capture, default 1300
   min: 1300

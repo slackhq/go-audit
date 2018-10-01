@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dnstap/golang-dnstap"
 	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
@@ -343,24 +342,13 @@ func main() {
 	if err != nil {
 		el.Fatal(err)
 	}
-	dnstapSock := config.GetString("dnstap.socket")
 
-	var i dnstap.Input
-
-	// Start the output loop.
-	output := make(chan []byte, 1)
-	opener := outputOpener()
-	outDone := make(chan struct{})
-	go outputLoop(opener, output, outDone)
-
-	i, err = dnstap.NewFrameStreamSockInputFromPath(dnstapSock)
+	dnstapClient, err := NewDNSTap(config.GetString("dnstap.socket"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
-		os.Exit(1)
+		el.Fatal(err)
 	}
-	fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", dnstapSock)
 
-	go i.ReadInto(output)
+	go dnstapClient.readSock()
 
 	marshaller := NewAuditMarshaller(
 		writer,

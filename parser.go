@@ -142,7 +142,6 @@ func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
 			}
 		}
 
-		// Find the next uid= if we have space for one
 		next := start + end + 1
 		if next >= len(data) {
 			break
