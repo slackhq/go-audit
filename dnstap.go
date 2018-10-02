@@ -27,7 +27,6 @@ func NewDNSTap(socketPath string) (*DNSTap, error) {
 	l, err := net.Listen("unix", socketPath)
 	if err != nil {
 		el.Fatal("Listen error: ", err)
-		return nil, err
 	}
 	d := &DNSTap{
 		Listener: l,
