@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
@@ -24,14 +25,15 @@ type DNSTap struct {
 func NewDNSTap(socketPath string) (*DNSTap, error) {
 	os.Remove(socketPath)
 	//c := cache.New(defaulTimeout, defaulTimeout *2)
-	l, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
-		el.Fatal("Listen error: ", err)
+		return nil, fmt.Errorf("Listen error: ", err)
 	}
 	d := &DNSTap{
-		Listener: l,
+		Listener: listener,
 		//Cache: c,
 	}
+	l.Printf("dnstap: opened input socket: %s", socketPath)
 	return d, nil
 }
 
