@@ -34,7 +34,7 @@ func NewDNSTap(socketPath string) (*DNSTap, error) {
 		Listener: listener,
 		//Cache: c,
 	}
-	l.Printf("dnstap: opened input socket: %s", socketPath)
+	l.Printf("Started dnstap listener, opened input socket: %s", socketPath)
 	return d, nil
 }
 
