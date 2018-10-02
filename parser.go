@@ -12,7 +12,6 @@ import (
 )
 
 var uidMap = map[string]string{}
-var DNSMap = map[string]string{}
 var headerEndChar = []byte{")"[0]}
 var headerSepChar = byte(':')
 var spaceChar = byte(' ')
@@ -116,7 +115,7 @@ func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
 			break
 		}
 
-		// Progress the start point beyon the = sign
+		// Progress the start point beyond the = sign
 		start += 6
 		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
 			// There was no ending space, maybe the uid is at the end of the line
@@ -163,7 +162,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 			break
 		}
 
-		// Progress the start point beyon the = sign
+		// Progress the start point beyond the = sign
 		start += 4
 		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
 			// There was no ending space, maybe the uid is at the end of the line

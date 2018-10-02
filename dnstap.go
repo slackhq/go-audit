@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
-	"fmt"
 
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
@@ -84,7 +85,8 @@ func (d *DNSTap) storeDNSRec(msg *dns.Msg) {
 	for i, rr := range msg.Answer {
 		if msg.Answer[i].Header().Rrtype == dns.TypeA {
 			ipAddr := msg.Answer[i].(*dns.A).A.String()
-			hostname := rr.Header().Name
+			// dns responses have a trailing . that we remove
+			hostname := strings.TrimRight(rr.Header().Name, ".")
 			c.Set(ipAddr, hostname, defaulTimeout)
 		}
 
