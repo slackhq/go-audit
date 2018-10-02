@@ -62,10 +62,12 @@ func (d *DNSTap) frameDecode(conn net.Conn) {
 		frame, err := dec.Decode()
 		if err != nil {
 			el.Printf("framestream.Decoder.Decode() failed: %s\n", err)
+			break
 		}
 		dt := &dnstap.Dnstap{}
 		if err := proto.Unmarshal(frame, dt); err != nil {
 			el.Printf("dnstap.DnsOutput: proto.Unmarshal() failed: %s\n", err)
+			break
 		}
 		if *dt.Type == dnstap.Dnstap_MESSAGE {
 			msg := new(dns.Msg)

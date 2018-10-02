@@ -128,10 +128,16 @@ func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
 		}
 
 		saddr := data[start : start+end]
-		// todo: check the socket family and if its ipv4
-		ipv4Hex := saddr[8:16]
-		octet, _ := hex.DecodeString(ipv4Hex)
-		ipAddr := fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
+
+		var ipv4Hex, ipAddr string
+
+		switch family := saddr[0:4]; family {
+		// 0200 = ipv4
+		case "0200":
+			ipv4Hex = saddr[8:16]
+			octet, _ := hex.DecodeString(ipv4Hex)
+			ipAddr = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
+		}
 
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.DNSMap[ipAddr]; !ok {
