@@ -58,20 +58,18 @@ func (d *DNSTap) frameDecode(conn net.Conn) {
 	for {
 		frame, err := dec.Decode()
 		if err != nil {
-			el.Fatalf("framestream.Decoder.Decode() failed: %s\n", err)
-			break
+			el.Printf("framestream.Decoder.Decode() failed: %s\n", err)
 		}
 		dt := &dnstap.Dnstap{}
 		if err := proto.Unmarshal(frame, dt); err != nil {
-			el.Fatalf("dnstap.DnsOutput: proto.Unmarshal() failed: %s\n", err)
-			break
+			el.Printf("dnstap.DnsOutput: proto.Unmarshal() failed: %s\n", err)
 		}
 		if *dt.Type == dnstap.Dnstap_MESSAGE {
 			msg := new(dns.Msg)
 			if dt.Message.ResponseMessage != nil {
 				err := msg.Unpack(dt.Message.ResponseMessage)
 				if err != nil {
-					el.Fatalf("msg.Unpack:() failed: %s \n", err)
+					el.Printf("msg.Unpack:() failed: %s \n", err)
 				} else {
 					d.storeDNSRec(msg)
 				}
