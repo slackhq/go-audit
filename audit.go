@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"log/syslog"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/spf13/viper"
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -343,12 +344,12 @@ func main() {
 		el.Fatal(err)
 	}
 
-	dnstapClient, err := NewDNSTap(config.GetString("dnstap.socket"))
+	dnstapClient, err := NewDnsTapClient(config.GetString("dnstap.socket"))
 	if err != nil {
 		el.Fatal(err)
 	}
 
-	go dnstapClient.readSock()
+	go dnstapClient.Receive()
 
 	marshaller := NewAuditMarshaller(
 		writer,

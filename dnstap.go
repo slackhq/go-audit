@@ -14,42 +14,42 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-const defaulTimeout = 24 * time.Hour
+const defaultTimeout = time.Hour
 
-var c = cache.New(defaulTimeout, defaulTimeout*2)
+var c = cache.New(defaultTimeout, defaultTimeout*2)
 
-type DNSTap struct {
+type DnsTapClient struct {
 	Listener net.Listener
 	//Cache    *cache.Cache
 }
 
-func NewDNSTap(socketPath string) (*DNSTap, error) {
-	os.Remove(socketPath)
+func NewDnsTapClient(socket string) (*DnsTapClient, error) {
+	os.Remove(socket)
 	//c := cache.New(defaulTimeout, defaulTimeout *2)
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("Listen error: ", err)
 	}
-	d := &DNSTap{
+	d := &DnsTapClient{
 		Listener: listener,
 		//Cache: c,
 	}
-	l.Printf("Started dnstap listener, opened input socket: %s", socketPath)
+	l.Printf("Started dnstap listener, opened input socket: %s", socket)
 	return d, nil
 }
 
-func (d *DNSTap) readSock() {
+func (d *DnsTapClient) Receive() {
 	for {
 		conn, err := d.Listener.Accept()
 		if err != nil {
 			el.Printf("net.Listener.Accept() failed: %s\n", err)
 			continue
 		}
-		go d.frameDecode(conn)
+		d.Decode(conn)
 	}
 }
 
-func (d *DNSTap) frameDecode(conn net.Conn) {
+func (d *DnsTapClient) Decode(conn net.Conn) {
 	decoderOptions := &framestream.DecoderOptions{
 		ContentType:   []byte("protobuf:dnstap.Dnstap"),
 		Bidirectional: true,
@@ -69,28 +69,25 @@ func (d *DNSTap) frameDecode(conn net.Conn) {
 			el.Printf("dnstap.DnsOutput: proto.Unmarshal() failed: %s\n", err)
 			break
 		}
-		if *dt.Type == dnstap.Dnstap_MESSAGE {
-			msg := new(dns.Msg)
-			if dt.Message.ResponseMessage != nil {
-				err := msg.Unpack(dt.Message.ResponseMessage)
-				if err != nil {
-					el.Printf("msg.Unpack:() failed: %s \n", err)
-				} else {
-					d.storeDNSRec(msg)
-				}
-			}
+		if dt.Message.ResponseMessage != nil {
+			d.cache(dt)
 		}
 	}
 }
 
-func (d *DNSTap) storeDNSRec(msg *dns.Msg) {
-	for i, rr := range msg.Answer {
-		if msg.Answer[i].Header().Rrtype == dns.TypeA {
-			ipAddr := msg.Answer[i].(*dns.A).A.String()
-			// dns responses have a trailing . that we remove
-			hostname := strings.TrimRight(rr.Header().Name, ".")
-			c.Set(ipAddr, hostname, defaulTimeout)
+func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
+	m := new(dns.Msg)
+	err := m.Unpack(dt.Message.ResponseMessage)
+	if err != nil {
+		el.Printf("msg.Unpack() failed: %s \n", err)
+	} else {
+		for i, r := range m.Answer {
+			switch m.Answer[i].Header().Rrtype {
+			case dns.TypeA:
+				ip := m.Answer[i].(*dns.A).A.String()
+				host := strings.TrimRight(r.Header().Name, ".")
+				c.Set(ip, host, defaultTimeout)
+			}
 		}
-
 	}
 }

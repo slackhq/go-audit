@@ -35,7 +35,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
-	DNSMap        map[string]string `json:"dns_map"`
+	DnsMap        map[string]string `json:"dnstap"`
 	Syscall       string            `json:"-"`
 }
 
@@ -47,7 +47,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
-		DNSMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
+		DnsMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
 		Msgs:          make([]*AuditMessage, 0, 6),
 	}
 
@@ -94,7 +94,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
 	case 1309, 1307, 1306:
-		amg.mapDNS(am)
+		amg.mapDns(am)
 		// Don't map uids here
 	case 1300:
 		amg.findSyscall(am)
@@ -104,8 +104,8 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	}
 }
 
-// Find all `saddr=` occurrences in a message and map to dnstap cache
-func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
+// Find all `saddr=` occurrences in a message and do a lookup
+func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 	data := am.Data
 	start := 0
 	end := 0
@@ -118,10 +118,7 @@ func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
 		// Progress the start point beyond the = sign
 		start += 6
 		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
-			// There was no ending space, maybe the uid is at the end of the line
 			end = len(data) - start
-
-			// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a uid
 			if end > 34 {
 				break
 			}
@@ -129,21 +126,19 @@ func (amg *AuditMessageGroup) mapDNS(am *AuditMessage) {
 
 		saddr := data[start : start+end]
 
-		var ipv4Hex, ipAddr string
+		var ip string
 
 		switch family := saddr[0:4]; family {
-		// 0200 = ipv4
+		// 0200: ipv4
 		case "0200":
-			ipv4Hex = saddr[8:16]
-			octet, _ := hex.DecodeString(ipv4Hex)
-			ipAddr = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
+			octet, _ := hex.DecodeString(saddr[8:16])
+			ip = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
 		}
 
-		// Don't bother re-adding if the existing group already has the mapping
-		if _, ok := amg.DNSMap[ipAddr]; !ok {
-			DNSHost, ok := c.Get(ipAddr)
+		if _, ok := amg.DnsMap[ip]; !ok {
+			host, ok := c.Get(ip)
 			if ok {
-				amg.DNSMap[ipAddr] = DNSHost.(string)
+				amg.DnsMap[ip] = host.(string)
 			}
 		}
 
