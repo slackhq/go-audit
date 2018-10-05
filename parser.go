@@ -47,7 +47,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
-		DnsMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
+		DnsMap:        make(map[string]string, 1), 
 		Msgs:          make([]*AuditMessage, 0, 6),
 	}
 
@@ -94,7 +94,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
 	case 1309, 1307, 1306:
-		amg.mapDns(am)
+		// amg.mapDns(am)
 		// Don't map uids here
 	case 1300:
 		amg.findSyscall(am)
@@ -135,11 +135,9 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 			ip = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
 		}
 
-		if _, ok := amg.DnsMap[ip]; !ok {
-			host, ok := c.Get(ip)
-			if ok {
-				amg.DnsMap[ip] = host.(string)
-			}
+		host, ok := c.Get(ip)
+		if ok {
+			amg.DnsMap[ip] = host.(string)
 		}
 
 		next := start + end + 1

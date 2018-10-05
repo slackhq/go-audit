@@ -45,7 +45,7 @@ func (d *DnsTapClient) Receive() {
 			el.Printf("net.Listener.Accept() failed: %s\n", err)
 			continue
 		}
-		d.Decode(conn)
+		go d.Decode(conn)
 	}
 }
 

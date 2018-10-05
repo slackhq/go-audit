@@ -116,6 +116,15 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		//TODO: attempted to complete a missing message, log?
 		return
 	}
+	for _, m := range msg.Msgs {
+		switch m.Type {
+		case 1306:
+			// delay the mapping
+			time.Sleep(time.Millisecond * 180)
+			// time.Sleep(time.Millisecond * 50)
+			msg.mapDns(m)
+		}
+	}
 
 	if a.dropMessage(msg) {
 		delete(a.msgs, seq)
