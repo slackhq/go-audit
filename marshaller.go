@@ -120,8 +120,7 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		switch m.Type {
 		case 1306:
 			// delay the mapping
-			time.Sleep(time.Millisecond * 180)
-			// time.Sleep(time.Millisecond * 50)
+			time.Sleep(time.Millisecond * 100)
 			msg.mapDns(m)
 		}
 	}

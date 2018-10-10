@@ -28,7 +28,7 @@ func NewDnsTapClient(socket string) (*DnsTapClient, error) {
 	//c := cache.New(defaulTimeout, defaulTimeout *2)
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
-		return nil, fmt.Errorf("Listen error: ", err)
+		return nil, fmt.Errorf("Listen error: %s", err)
 	}
 	d := &DnsTapClient{
 		Listener: listener,
