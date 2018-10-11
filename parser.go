@@ -142,7 +142,7 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 func parseAddr(saddr string) (addr string) {
 	switch family := saddr[0:4]; family {
 	// 0200: ipv4
-	case :0200"
+	case "0200":
 		b, err := hex.DecodeString(saddr[8:16])
 		if err != nil {
 			el.Printf("unable to decode hex to bytes: %s", err)
