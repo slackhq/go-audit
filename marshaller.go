@@ -80,8 +80,16 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		a.flushOld()
 		return
 	} else if nlMsg.Header.Type == EVENT_EOE {
+		if val, ok := a.msgs[aMsg.Seq]; ok {
+			if aMsg.Type == 1306 {
+				if len(val.DnsMap) > 0 { 
 		// This is end of event msg, flush the msg with that sequence and discard this one
-		a.completeMessage(aMsg.Seq)
+					a.completeMessage(aMsg.Seq)
+			}
+		}
+	}
+		// This is end of event msg, flush the msg with that sequence and discard this one
+		// a.completeMessage(aMsg.Seq)
 		return
 	}
 
