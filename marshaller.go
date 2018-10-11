@@ -81,13 +81,11 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		return
 	} else if nlMsg.Header.Type == EVENT_EOE {
 		if val, ok := a.msgs[aMsg.Seq]; ok {
-			if aMsg.Type == 1306 {
-				if len(val.DnsMap) > 0 { 
-		// This is end of event msg, flush the msg with that sequence and discard this one
-					a.completeMessage(aMsg.Seq)
+			if len(val.DnsMap) > 0 {
+				// This is end of event msg, flush the msg with that sequence and discard this one
+				a.completeMessage(aMsg.Seq)
 			}
 		}
-	}
 		// This is end of event msg, flush the msg with that sequence and discard this one
 		// a.completeMessage(aMsg.Seq)
 		return
@@ -127,8 +125,6 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	for _, m := range msg.Msgs {
 		switch m.Type {
 		case 1306:
-			// delay the mapping
-			time.Sleep(time.Millisecond * 100)
 			msg.mapDns(m)
 		}
 	}
