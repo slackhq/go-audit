@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
+	"net"
 	"os/user"
 	"strconv"
 	"strings"
@@ -13,32 +13,10 @@ import (
 
 const (
 	SYSCALL           = 1300            // Syscall event
-	PATH              = 1302            // Filename path information
-	IPC               = 1303            // IPC record
-	SOCKETCALL        = 1304            // sys_socketcall arguments
 	CONFIG_CHANGE     = 1305            // Audit system configuration change
-	SOCKADDR          = 1306            // sockaddr copied as syscall arg
+	SOCKADDR          = 1306            // Sockaddr copied as syscall arg
 	CWD               = 1307            // Current working directory
-	EXECVE            = 1309            // execve arguments
-	IPC_SET_PERM      = 1311            // IPC new permissions record type
-	MQ_OPEN           = 1312            // POSIX MQ open record type
-	MQ_SENDRECV       = 1313            // POSIX MQ sendreceive record type
-	MQ_NOTIFY         = 1314            // POSIX MQ notify record type
-	MQ_GETSETATTR     = 1315            // POSIX MQ getset attribute record type
-	KERNEL_OTHER      = 1316            // For use by 3rd party modules
-	FD_PAIR           = 1317            // audit record for pipesocketpair
-	OBJ_PID           = 1318            // ptrace target
-	TTY               = 1319            // Input on an administrative TTY
-	EOE               = 1320            // End of multi-record event
-	BPRM_FCAPS        = 1321            // Information about fcaps increasing perms
-	CAPSET            = 1322            // Record showing argument to sys_capset
-	MMAP              = 1323            // Record showing descriptor and flags in mmap
-	NETFILTER_PKT     = 1324            // Packets traversing netfilter chains
-	NETFILTER_CFG     = 1325            // Netfilter chain modifications
-	SECCOMP           = 1326            // Secure Computing event
-	PROCTITLE         = 1327            // Proctitle emit event
-	FEATURE_CHANGE    = 1328            // audit log listing feature changes
-	REPLACE           = 1329            // Replace auditd if this packet unanswerd
+	EXECVE            = 1309            // Execve arguments
 	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
 	HEADER_START_POS  = 6               // Position in the audit header that the data starts
 	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
@@ -164,14 +142,12 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 func parseAddr(saddr string) (addr string) {
 	switch family := saddr[0:4]; family {
 	// 0200: ipv4
-	case "0200":
-		octet, err := hex.DecodeString(saddr[8:16])
+	case :0200"
+		b, err := hex.DecodeString(saddr[8:16])
 		if err != nil {
-			el.Printf("unable to decode hex to ip: %s", err)
+			el.Printf("unable to decode hex to bytes: %s", err)
 		}
-		addr = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
-		// case "0A00":
-		// 	octet, err := hex.DecodeString(saddr[16:48])
+		addr = net.IP(b).String()
 	}
 
 	return addr
