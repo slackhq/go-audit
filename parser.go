@@ -11,16 +11,44 @@ import (
 	"time"
 )
 
+const (
+	SYSCALL           = 1300            // Syscall event
+	PATH              = 1302            // Filename path information
+	IPC               = 1303            // IPC record
+	SOCKETCALL        = 1304            // sys_socketcall arguments
+	CONFIG_CHANGE     = 1305            // Audit system configuration change
+	SOCKADDR          = 1306            // sockaddr copied as syscall arg
+	CWD               = 1307            // Current working directory
+	EXECVE            = 1309            // execve arguments
+	IPC_SET_PERM      = 1311            // IPC new permissions record type
+	MQ_OPEN           = 1312            // POSIX MQ open record type
+	MQ_SENDRECV       = 1313            // POSIX MQ sendreceive record type
+	MQ_NOTIFY         = 1314            // POSIX MQ notify record type
+	MQ_GETSETATTR     = 1315            // POSIX MQ getset attribute record type
+	KERNEL_OTHER      = 1316            // For use by 3rd party modules
+	FD_PAIR           = 1317            // audit record for pipesocketpair
+	OBJ_PID           = 1318            // ptrace target
+	TTY               = 1319            // Input on an administrative TTY
+	EOE               = 1320            // End of multi-record event
+	BPRM_FCAPS        = 1321            // Information about fcaps increasing perms
+	CAPSET            = 1322            // Record showing argument to sys_capset
+	MMAP              = 1323            // Record showing descriptor and flags in mmap
+	NETFILTER_PKT     = 1324            // Packets traversing netfilter chains
+	NETFILTER_CFG     = 1325            // Netfilter chain modifications
+	SECCOMP           = 1326            // Secure Computing event
+	PROCTITLE         = 1327            // Proctitle emit event
+	FEATURE_CHANGE    = 1328            // audit log listing feature changes
+	REPLACE           = 1329            // Replace auditd if this packet unanswerd
+	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
+	HEADER_START_POS  = 6               // Position in the audit header that the data starts
+	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
+	SOCKADDR_LENGTH   = 34              // Length of saddr event
+)
+
 var uidMap = map[string]string{}
 var headerEndChar = []byte{")"[0]}
 var headerSepChar = byte(':')
 var spaceChar = byte(' ')
-
-const (
-	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
-	HEADER_START_POS  = 6               // Position in the audit header that the data starts
-	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
-)
 
 type AuditMessage struct {
 	Type      uint16 `json:"type"`
@@ -93,10 +121,10 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307, 1306:
+	case EXECVE, CWD, SOCKADDR:
 		amg.mapDns(am)
 		// Don't map uids here
-	case 1300:
+	case SYSCALL:
 		amg.findSyscall(am)
 		amg.mapUids(am)
 	default:
@@ -110,44 +138,43 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 	start := 0
 	end := 0
 
-	for {
-		if start = strings.Index(data, "saddr="); start < 0 {
-			break
-		}
-
-		// Progress the start point beyond the = sign
-		start += 6
-		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
-			end = len(data) - start
-			if end > 34 {
-				break
-			}
-		}
-
-		saddr := data[start : start+end]
-
-		var ip string
-
-		switch family := saddr[0:4]; family {
-		// 0200: ipv4
-		case "0200":
-			octet, _ := hex.DecodeString(saddr[8:16])
-			ip = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
-		}
-
-		host, ok := c.Get(ip)
-		if ok {
-			amg.DnsMap[ip] = host.(string)
-		}
-
-		next := start + end + 1
-		if next >= len(data) {
-			break
-		}
-
-		data = data[next:]
+	if start = strings.Index(data, "saddr="); start < 0 {
+		return
 	}
 
+	// Progress the start point beyond the = sign
+	start += 6
+	if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
+		end = len(data) - start
+		if end > SOCKADDR_LENGTH {
+			return
+		}
+	}
+
+	saddr := data[start : start+end]
+
+	ip := parseAddr(saddr)
+
+	host, ok := c.Get(ip)
+	if ok {
+		amg.DnsMap[ip] = host.(string)
+	}
+}
+
+func parseAddr(saddr string) (addr string) {
+	switch family := saddr[0:4]; family {
+	// 0200: ipv4
+	case "0200":
+		octet, err := hex.DecodeString(saddr[8:16])
+		if err != nil {
+			el.Printf("unable to decode hex to ip: %s", err)
+		}
+		addr = fmt.Sprintf("%v.%v.%v.%v", octet[0], octet[1], octet[2], octet[3])
+		// case "0A00":
+		// 	octet, err := hex.DecodeString(saddr[16:48])
+	}
+
+	return addr
 }
 
 // Find all `uid=` occurrences in a message and adds the username to the UidMap object

@@ -343,7 +343,7 @@ func main() {
 	if err != nil {
 		el.Fatal(err)
 	}
-	
+
 	dnstapSckt := config.GetString("dnstap.socket")
 
 	if dnstapSckt != "" {
