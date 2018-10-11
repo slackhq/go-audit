@@ -39,6 +39,7 @@ func NewDnsTapClient(socket string) (*DnsTapClient, error) {
 }
 
 func (d *DnsTapClient) Receive() {
+	defer d.Listener.Close()
 	for {
 		conn, err := d.Listener.Accept()
 		if err != nil {

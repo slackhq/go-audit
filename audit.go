@@ -343,13 +343,17 @@ func main() {
 	if err != nil {
 		el.Fatal(err)
 	}
+	
+	dnstapSckt := config.GetString("dnstap.socket")
 
-	dnstapClient, err := NewDnsTapClient(config.GetString("dnstap.socket"))
-	if err != nil {
-		el.Fatal(err)
+	if dnstapSckt != "" {
+		dnstapClient, err := NewDnsTapClient(dnstapSckt)
+		if err != nil {
+			el.Fatal(err)
+		}
+
+		go dnstapClient.Receive()
 	}
-
-	go dnstapClient.Receive()
 
 	marshaller := NewAuditMarshaller(
 		writer,
