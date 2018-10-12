@@ -24,6 +24,7 @@ type AuditMarshaller struct {
 	maxOutOfOrder int
 	attempts      int
 	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+	saddrSeq      map[string]bool
 }
 
 type AuditFilter struct {
@@ -80,11 +81,12 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		a.flushOld()
 		return
 	} else if nlMsg.Header.Type == EVENT_EOE {
+		el.Println("EOE Message")
 		if val, ok := a.msgs[aMsg.Seq]; ok {
 			if len(val.DnsMap) > 0 {
-				// This is end of event msg, flush the msg with that sequence and discard this one
+		// This is end of event msg, flush the msg with that sequence and discard this one
 				a.completeMessage(aMsg.Seq)
-			}
+		}
 		}
 		// This is end of event msg, flush the msg with that sequence and discard this one
 		// a.completeMessage(aMsg.Seq)
@@ -105,6 +107,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 // Outputs any messages that are old enough
 // This is because there is no indication of multi message events coming from kaudit
 func (a *AuditMarshaller) flushOld() {
+	el.Println("Flush old")
 	now := time.Now()
 	for seq, msg := range a.msgs {
 		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {

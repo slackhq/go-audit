@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
@@ -14,8 +15,10 @@ import (
 
 type DnsTapClient struct {
 	Listener net.Listener
+	//AuditMarshaller *AuditMarshaller
 }
 
+//func NewDnsTapClient(socket string, am *AuditMarshaller) (*DnsTapClient, error) {
 func NewDnsTapClient(socket string) (*DnsTapClient, error) {
 	os.Remove(socket)
 	listener, err := net.Listen("unix", socket)
@@ -24,6 +27,7 @@ func NewDnsTapClient(socket string) (*DnsTapClient, error) {
 	}
 	d := &DnsTapClient{
 		Listener: listener,
+		//AuditMarshaller: am,
 	}
 	l.Printf("Started dnstap listener, opened input socket: %s", socket)
 	return d, nil
@@ -74,11 +78,20 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 		el.Printf("msg.Unpack() failed: %s \n", err)
 	} else {
 		for i, r := range m.Answer {
+			host := strings.TrimRight(r.Header().Name, ".")
 			switch m.Answer[i].Header().Rrtype {
 			case dns.TypeA:
-				ip := m.Answer[i].(*dns.A).A.String()
-				host := strings.TrimRight(r.Header().Name, ".")
-				c.Set(ip, []byte(host))
+				ipv4 := m.Answer[i].(*dns.A).A.String()
+				c.Set(ipv4, []byte(host))
+				el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
+			case dns.TypeAAAA:
+				ipv6 := m.Answer[i].(*dns.AAAA).AAAA.String()
+				c.Set(ipv6, []byte(host))
+				el.Printf("Setting ipv6 for %s -> %s @ %v", host, ipv6, time.Now().Unix())
+			case dns.TypeCNAME:
+				cname := m.Answer[i].(*dns.CNAME).Target
+				c.Set(cname, []byte(host))
+				el.Printf("Setting cname for %s -> %s @ %v", host, cname, time.Now().Unix())
 			}
 		}
 	}

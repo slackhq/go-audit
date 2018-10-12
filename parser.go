@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"os/user"
 	"strconv"
@@ -31,14 +32,14 @@ var spaceChar = byte(' ')
 type AuditMessage struct {
 	Type      uint16 `json:"type"`
 	Data      string `json:"data"`
-	Seq       int    `json:"-"`
-	AuditTime string `json:"-"`
+	Seq       int    `json:"sequence"`
+	AuditTime string `json:"timestamp"`
 }
 
 type AuditMessageGroup struct {
 	Seq           int               `json:"sequence"`
 	AuditTime     string            `json:"timestamp"`
-	CompleteAfter time.Time         `json:"-"`
+	CompleteAfter time.Time         `json:"completeAfter"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
 	DnsMap        map[string]string `json:"dnstap"`
@@ -100,7 +101,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
 	case EXECVE, CWD, SOCKADDR:
-		amg.mapDns(am)
+		// amg.mapDns(am)
 		// Don't map uids here
 	case SYSCALL:
 		amg.findSyscall(am)
@@ -136,6 +137,9 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 	host, err := c.Get(ip)
 	if err == nil {
 		amg.DnsMap[ip] = string(host)
+		amg.DnsMap["time"] = fmt.Sprintf("%v", time.Now().Unix())
+	} else {
+		el.Printf("[%s] not in cache", ip)
 	}
 }
 

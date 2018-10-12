@@ -351,6 +351,19 @@ func main() {
 
 	dnstapSckt := config.GetString("dnstap.socket")
 
+
+	marshaller := NewAuditMarshaller(
+		writer,
+		uint16(config.GetInt("events.min")),
+		uint16(config.GetInt("events.max")),
+		config.GetBool("message_tracking.enabled"),
+		config.GetBool("message_tracking.log_out_of_order"),
+		config.GetInt("message_tracking.max_out_of_order"),
+		filters,
+	)
+
+	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
+
 	if dnstapSckt != "" {
 		cacheCfg := bigcache.Config{
 			Shards:             1024,
@@ -366,6 +379,9 @@ func main() {
 			el.Fatal(cacheInitErr)
 		}
 
+		c.Set("127.0.0.1", []byte("loopback"))
+
+		//dnstapClient, err := NewDnsTapClient(dnstapSckt, marshaller)
 		dnstapClient, err := NewDnsTapClient(dnstapSckt)
 		if err != nil {
 			el.Fatal(err)
@@ -373,18 +389,6 @@ func main() {
 
 		go dnstapClient.Receive()
 	}
-
-	marshaller := NewAuditMarshaller(
-		writer,
-		uint16(config.GetInt("events.min")),
-		uint16(config.GetInt("events.max")),
-		config.GetBool("message_tracking.enabled"),
-		config.GetBool("message_tracking.log_out_of_order"),
-		config.GetInt("message_tracking.max_out_of_order"),
-		filters,
-	)
-
-	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
 
 	//Main loop. Get data from netlink and send it to the json lib for processing
 	for {
