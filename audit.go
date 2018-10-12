@@ -14,9 +14,14 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/allegro/bigcache"
 	"github.com/spf13/viper"
 )
+
+var c *bigcache.BigCache
+var cacheInitErr error
 
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
@@ -347,6 +352,20 @@ func main() {
 	dnstapSckt := config.GetString("dnstap.socket")
 
 	if dnstapSckt != "" {
+		cacheCfg := bigcache.Config{
+			Shards:             1024,
+			LifeWindow:         24 * time.Hour,
+			MaxEntriesInWindow: 1000 * 10 * 60,
+			MaxEntrySize:       500,
+			HardMaxCacheSize:   512,
+		}
+
+		c, cacheInitErr = bigcache.NewBigCache(cacheCfg)
+
+		if cacheInitErr != nil {
+			el.Fatal(cacheInitErr)
+		}
+
 		dnstapClient, err := NewDnsTapClient(dnstapSckt)
 		if err != nil {
 			el.Fatal(err)

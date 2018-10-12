@@ -133,9 +133,9 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 
 	ip := parseAddr(saddr)
 
-	host, ok := c.Get(ip)
-	if ok {
-		amg.DnsMap[ip] = host.(string)
+	host, err := c.Get(ip)
+	if err == nil {
+		amg.DnsMap[ip] = string(host)
 	}
 }
 
