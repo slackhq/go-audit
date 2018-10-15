@@ -351,7 +351,6 @@ func main() {
 
 	dnstapSckt := config.GetString("dnstap.socket")
 
-
 	marshaller := NewAuditMarshaller(
 		writer,
 		uint16(config.GetInt("events.min")),
@@ -381,8 +380,8 @@ func main() {
 
 		c.Set("127.0.0.1", []byte("loopback"))
 
-		//dnstapClient, err := NewDnsTapClient(dnstapSckt, marshaller)
-		dnstapClient, err := NewDnsTapClient(dnstapSckt)
+		dnstapClient, err := NewDnsTapClient(dnstapSckt, marshaller)
+		//dnstapClient, err := NewDnsTapClient(dnstapSckt)
 		if err != nil {
 			el.Fatal(err)
 		}

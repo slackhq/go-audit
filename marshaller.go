@@ -24,7 +24,7 @@ type AuditMarshaller struct {
 	maxOutOfOrder int
 	attempts      int
 	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
-	saddrSeq      map[string]bool
+	waitingForDNS map[string]int
 }
 
 type AuditFilter struct {
@@ -45,6 +45,7 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
 		filters:       make(map[string]map[uint16][]*regexp.Regexp),
+		waitingForDNS: make(map[string]int),
 	}
 
 	for _, filter := range filters {
@@ -80,21 +81,26 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
 		a.flushOld()
 		return
-	} else if nlMsg.Header.Type == EVENT_EOE {
-		el.Println("EOE Message")
-		if val, ok := a.msgs[aMsg.Seq]; ok {
-			if len(val.DnsMap) > 0 {
-		// This is end of event msg, flush the msg with that sequence and discard this one
-				a.completeMessage(aMsg.Seq)
-		}
-		}
-		// This is end of event msg, flush the msg with that sequence and discard this one
-		// a.completeMessage(aMsg.Seq)
+	}
+
+	val, ok := a.msgs[aMsg.Seq]
+
+	if ok && nlMsg.Header.Type == EVENT_EOE && !val.gotSaddr && !val.gotDNS {
+		a.completeMessage(aMsg.Seq)
 		return
 	}
 
-	if val, ok := a.msgs[aMsg.Seq]; ok {
-		// Use the original AuditMessageGroup if we have one
+	if ok {
+		// mark if we don't have dns yet
+		if val.gotSaddr && !val.gotDNS {
+			ip, _ := a.getDns(val)
+			if ip != "" {
+				a.waitingForDNS[ip] = val.Seq
+			}
+		}
+		if val.gotSaddr && val.gotDNS {
+			a.completeMessage(aMsg.Seq)
+		}
 		val.AddMessage(aMsg)
 	} else {
 		// Create a new AuditMessageGroup
@@ -104,10 +110,18 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 	a.flushOld()
 }
 
+func (a *AuditMarshaller) getDns(val *AuditMessageGroup) (ip string, host []byte) {
+	for _, msg := range val.Msgs {
+		if msg.Type == 1306 {
+			ip, host = val.mapDns(msg)
+		}
+	}
+	return ip, host
+}
+
 // Outputs any messages that are old enough
 // This is because there is no indication of multi message events coming from kaudit
 func (a *AuditMarshaller) flushOld() {
-	el.Println("Flush old")
 	now := time.Now()
 	for seq, msg := range a.msgs {
 		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {
@@ -125,11 +139,9 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		//TODO: attempted to complete a missing message, log?
 		return
 	}
-	for _, m := range msg.Msgs {
-		switch m.Type {
-		case 1306:
-			msg.mapDns(m)
-		}
+
+	if !msg.gotDNS && msg.gotSaddr {
+		a.getDns(msg)
 	}
 
 	if a.dropMessage(msg) {

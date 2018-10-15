@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"net"
 	"os/user"
 	"strconv"
@@ -33,7 +32,7 @@ type AuditMessage struct {
 	Type      uint16 `json:"type"`
 	Data      string `json:"data"`
 	Seq       int    `json:"sequence"`
-	AuditTime string `json:"timestamp"`
+	AuditTime string `json:"-"`
 }
 
 type AuditMessageGroup struct {
@@ -44,6 +43,8 @@ type AuditMessageGroup struct {
 	UidMap        map[string]string `json:"uid_map"`
 	DnsMap        map[string]string `json:"dnstap"`
 	Syscall       string            `json:"-"`
+	gotSaddr      bool
+	gotDNS        bool
 }
 
 // Creates a new message group from the details parsed from the message
@@ -100,9 +101,10 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case EXECVE, CWD, SOCKADDR:
-		// amg.mapDns(am)
+	case EXECVE, CWD:
 		// Don't map uids here
+	case SOCKADDR:
+		amg.mapDns(am)
 	case SYSCALL:
 		amg.findSyscall(am)
 		amg.mapUids(am)
@@ -112,7 +114,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 }
 
 // Find all `saddr=` occurrences in a message and do a lookup
-func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
+func (amg *AuditMessageGroup) mapDns(am *AuditMessage) (ip string, host []byte) {
 	data := am.Data
 	start := 0
 	end := 0
@@ -132,15 +134,19 @@ func (amg *AuditMessageGroup) mapDns(am *AuditMessage) {
 
 	saddr := data[start : start+end]
 
-	ip := parseAddr(saddr)
+	amg.gotSaddr = true
 
-	host, err := c.Get(ip)
+	var err error
+
+	ip = parseAddr(saddr)
+
+	host, err = c.Get(ip)
 	if err == nil {
+		amg.gotDNS = true
 		amg.DnsMap[ip] = string(host)
-		amg.DnsMap["time"] = fmt.Sprintf("%v", time.Now().Unix())
-	} else {
-		el.Printf("[%s] not in cache", ip)
+		//amg.DnsMap["time"] = fmt.Sprintf("%v", time.Now().Unix())
 	}
+	return
 }
 
 func parseAddr(saddr string) (addr string) {
