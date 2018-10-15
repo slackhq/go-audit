@@ -31,14 +31,14 @@ var spaceChar = byte(' ')
 type AuditMessage struct {
 	Type      uint16 `json:"type"`
 	Data      string `json:"data"`
-	Seq       int    `json:"sequence"`
+	Seq       int    `json:"-"`
 	AuditTime string `json:"-"`
 }
 
 type AuditMessageGroup struct {
 	Seq           int               `json:"sequence"`
 	AuditTime     string            `json:"timestamp"`
-	CompleteAfter time.Time         `json:"completeAfter"`
+	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
 	DnsMap        map[string]string `json:"dnstap"`
