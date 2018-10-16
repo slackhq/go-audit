@@ -85,7 +85,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 
 	val, ok := a.msgs[aMsg.Seq]
 
-	if ok && nlMsg.Header.Type == EVENT_EOE && !val.gotSaddr && !val.gotDNS {
+	if ok && nlMsg.Header.Type == EVENT_EOE && len(a.waitingForDNS) == 0 {
 		a.completeMessage(aMsg.Seq)
 		return
 	}
