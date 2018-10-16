@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+//	"time"
+
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
 	"github.com/golang/protobuf/proto"
@@ -81,9 +83,14 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 			case dns.TypeA:
 				ipv4 := m.Answer[i].(*dns.A).A.String()
 				c.Set(ipv4, []byte(host))
-				//el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
-				if val, ok := d.AuditMarshaller.waitingForDNS[ipv4]; ok {
-					d.AuditMarshaller.completeMessage(val)
+			//	el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
+				if seq, ok := d.AuditMarshaller.waitingForDNS[ipv4]; ok {
+					if msg, ok := d.AuditMarshaller.msgs[seq]; ok {
+						if !msg.gotDNS && msg.gotSaddr {
+							d.AuditMarshaller.getDns(msg)
+						}
+						d.AuditMarshaller.completeMessage(seq)
+					}
 					delete(d.AuditMarshaller.waitingForDNS, ipv4)
 				}
 			case dns.TypeAAAA:

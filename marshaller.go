@@ -96,10 +96,12 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 			ip, _ := a.getDns(val)
 			if ip != "" {
 				a.waitingForDNS[ip] = val.Seq
+				return
 			}
 		}
 		if val.gotSaddr && val.gotDNS {
 			a.completeMessage(aMsg.Seq)
+			return
 		}
 		val.AddMessage(aMsg)
 	} else {
@@ -112,7 +114,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 
 func (a *AuditMarshaller) getDns(val *AuditMessageGroup) (ip string, host []byte) {
 	for _, msg := range val.Msgs {
-		if msg.Type == 1306 {
+		if msg.Type == SOCKADDR {
 			ip, host = val.mapDns(msg)
 		}
 	}
@@ -138,10 +140,6 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	if msg, ok = a.msgs[seq]; !ok {
 		//TODO: attempted to complete a missing message, log?
 		return
-	}
-
-	if !msg.gotDNS && msg.gotSaddr {
-		a.getDns(msg)
 	}
 
 	if a.dropMessage(msg) {
