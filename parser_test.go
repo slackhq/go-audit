@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"github.com/stretchr/testify/assert"

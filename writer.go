@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"encoding/json"
@@ -20,6 +20,9 @@ func NewAuditWriter(w io.Writer, attempts int) *AuditWriter {
 	}
 }
 
+func (a *AuditWriter) IOWriter() io.Writer     { return a.w }
+func (a *AuditWriter) SetIOWriter(w io.Writer) { a.e, a.w = json.NewEncoder(w), w }
+
 func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
 	for i := 0; i < a.attempts; i++ {
 		err = a.e.Encode(msg)
@@ -30,7 +33,7 @@ func (a *AuditWriter) Write(msg *AuditMessageGroup) (err error) {
 		if i != a.attempts {
 			// We have to reset the encoder because write errors are kept internally and can not be retried
 			a.e = json.NewEncoder(a.w)
-			el.Println("Failed to write message, retrying in 1 second. Error:", err)
+			Stderr.Println("Failed to write message, retrying in 1 second. Error:", err)
 			time.Sleep(time.Second * 1)
 		}
 	}

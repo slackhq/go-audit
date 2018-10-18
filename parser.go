@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"bytes"
@@ -145,17 +145,17 @@ func (amg *AuditMessageGroup) findSyscall(am *AuditMessage) {
 	start := 0
 	end := 0
 
-	if start = strings.Index(data, "syscall="); start < 0 {
+	if start = strings.Index(data, "Syscall="); start < 0 {
 		return
 	}
 
 	// Progress the start point beyond the = sign
 	start += 8
 	if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
-		// There was no ending space, maybe the syscall id is at the end of the line
+		// There was no ending space, maybe the Syscall id is at the end of the line
 		end = len(data) - start
 
-		// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a syscall id
+		// If the end of the line is greater than 5 characters away (overflows a 16 bit uint) then it can't be a Syscall id
 		if end > 5 {
 			return
 		}
