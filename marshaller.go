@@ -85,7 +85,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 
 	val, ok := a.msgs[aMsg.Seq]
 
-	if ok && nlMsg.Header.Type == EVENT_EOE && len(a.waitingForDNS) == 0 {
+	if ok && nlMsg.Header.Type == EVENT_EOE && (val.gotDNS || !val.gotSaddr){
 		a.completeMessage(aMsg.Seq)
 		return
 	}
@@ -94,15 +94,9 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		// mark if we don't have dns yet
 		if val.gotSaddr && !val.gotDNS {
 			ip, _ := a.getDns(val)
-			if ip != "" {
 				a.waitingForDNS[ip] = val.Seq
-				return
-			}
 		}
-		if val.gotSaddr && val.gotDNS {
-			a.completeMessage(aMsg.Seq)
-			return
-		}
+
 		val.AddMessage(aMsg)
 	} else {
 		// Create a new AuditMessageGroup
@@ -127,6 +121,7 @@ func (a *AuditMarshaller) flushOld() {
 	now := time.Now()
 	for seq, msg := range a.msgs {
 		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {
+			a.waitingForDNS = make(map[string]int)
 			a.completeMessage(seq)
 		}
 	}

@@ -365,11 +365,11 @@ func main() {
 
 	if dnstapSckt != "" {
 		cacheCfg := bigcache.Config{
-			Shards:             1024,
-			LifeWindow:         24 * time.Hour,
-			MaxEntriesInWindow: 1000 * 10 * 60,
-			MaxEntrySize:       500,
-			HardMaxCacheSize:   512,
+			Shards:             256,
+			LifeWindow:         time.Second * 300,
+			MaxEntriesInWindow: 1024,
+			MaxEntrySize:       96,
+			HardMaxCacheSize:   10,
 		}
 
 		c, cacheInitErr = bigcache.NewBigCache(cacheCfg)
@@ -377,8 +377,6 @@ func main() {
 		if cacheInitErr != nil {
 			el.Fatal(cacheInitErr)
 		}
-
-		c.Set("127.0.0.1", []byte("loopback"))
 
 		dnstapClient, err := NewDnsTapClient(dnstapSckt, marshaller)
 		//dnstapClient, err := NewDnsTapClient(dnstapSckt)
