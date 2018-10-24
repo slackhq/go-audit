@@ -24,7 +24,6 @@ type AuditMarshaller struct {
 	maxOutOfOrder int
 	attempts      int
 	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
-	waitingForDNS map[string]int
 }
 
 type AuditFilter struct {
@@ -45,7 +44,6 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
 		filters:       make(map[string]map[uint16][]*regexp.Regexp),
-		waitingForDNS: make(map[string]int),
 	}
 
 	for _, filter := range filters {
@@ -81,27 +79,15 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
 		a.flushOld()
 		return
-	}
-
-	val, ok := a.msgs[aMsg.Seq]
-
-	if ok && nlMsg.Header.Type == EVENT_EOE && (val.gotDNS || !val.gotSaddr) {
+	} else if nlMsg.Header.Type == EVENT_EOE {
+		// This is end of event msg, flush the msg with that sequence and discard this one
 		a.completeMessage(aMsg.Seq)
 		return
 	}
 
-	if ok {
-		if aMsg.Type == SOCKADDR {
-			val.mapDns(aMsg)
-		}
-
+	if val, ok := a.msgs[aMsg.Seq]; ok {
+		// Use the original AuditMessageGroup if we have one
 		val.AddMessage(aMsg)
-
-		// mark if we don't have dns yet
-		if val.gotSaddr && !val.gotDNS {
-			ip, _ := val.mapDns(aMsg)
-			a.waitingForDNS[ip] = val.Seq
-		}
 	} else {
 		// Create a new AuditMessageGroup
 		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
@@ -116,7 +102,7 @@ func (a *AuditMarshaller) flushOld() {
 	now := time.Now()
 	for seq, msg := range a.msgs {
 		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {
-			a.waitingForDNS = make(map[string]int)
+			// a.waitingForDNS = make(map[string]int)
 			a.completeMessage(seq)
 		}
 	}

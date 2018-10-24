@@ -363,6 +363,8 @@ func main() {
 
 	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
 
+	var dnstapClient *DnsTapClient
+
 	if dnstapSckt != "" {
 		cacheCfg := bigcache.Config{
 			Shards:             256,
@@ -378,8 +380,9 @@ func main() {
 			el.Fatal(cacheInitErr)
 		}
 
-		dnstapClient, err := NewDnsTapClient(dnstapSckt, marshaller)
-		//dnstapClient, err := NewDnsTapClient(dnstapSckt)
+		DnsMarshaller := NewDnsAuditMarshaller(marshaller)
+
+		dnstapClient, err = NewDnsTapClient(dnstapSckt, DnsMarshaller)
 		if err != nil {
 			el.Fatal(err)
 		}
@@ -399,7 +402,11 @@ func main() {
 			continue
 		}
 
-		marshaller.Consume(msg)
+		if dnstapClient != nil {
+			dnstapClient.DnsAuditMarshaller.Consume(msg)
+		} else {
+			marshaller.Consume(msg)
+		}
 
 	}
 }

@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	//	"time"
-
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
 	"github.com/golang/protobuf/proto"
@@ -16,10 +14,10 @@ import (
 
 type DnsTapClient struct {
 	Listener        net.Listener
-	AuditMarshaller *AuditMarshaller
+	DnsAuditMarshaller *DnsAuditMarshaller
 }
 
-func NewDnsTapClient(socket string, am *AuditMarshaller) (*DnsTapClient, error) {
+func NewDnsTapClient(socket string, am *DnsAuditMarshaller) (*DnsTapClient, error) {
 	os.Remove(socket)
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
@@ -27,7 +25,7 @@ func NewDnsTapClient(socket string, am *AuditMarshaller) (*DnsTapClient, error) 
 	}
 	d := &DnsTapClient{
 		Listener:        listener,
-		AuditMarshaller: am,
+		DnsAuditMarshaller: am,
 	}
 	l.Printf("Started dnstap listener, opened input socket: %s", socket)
 	return d, nil
@@ -84,14 +82,14 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 				ipv4 := m.Answer[i].(*dns.A).A.String()
 				c.Set(ipv4, []byte(host))
 				//	el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
-				if seq, ok := d.AuditMarshaller.waitingForDNS[ipv4]; ok {
-					if msg, ok := d.AuditMarshaller.msgs[seq]; ok {
+				if seq, ok := d.DnsAuditMarshaller.waitingForDNS[ipv4]; ok {
+					if msg, ok := d.DnsAuditMarshaller.msgs[seq]; ok {
 						if !msg.gotDNS && msg.gotSaddr {
 							getDns(msg)
 						}
-						d.AuditMarshaller.completeMessage(seq)
+						d.DnsAuditMarshaller.completeMessage(seq)
 					}
-					delete(d.AuditMarshaller.waitingForDNS, ipv4)
+					delete(d.DnsAuditMarshaller.waitingForDNS, ipv4)
 				}
 			case dns.TypeAAAA:
 				ipv6 := m.Answer[i].(*dns.AAAA).AAAA.String()
