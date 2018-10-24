@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-//	"time"
+	//	"time"
 
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
@@ -83,11 +83,11 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 			case dns.TypeA:
 				ipv4 := m.Answer[i].(*dns.A).A.String()
 				c.Set(ipv4, []byte(host))
-			//	el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
+				//	el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
 				if seq, ok := d.AuditMarshaller.waitingForDNS[ipv4]; ok {
 					if msg, ok := d.AuditMarshaller.msgs[seq]; ok {
 						if !msg.gotDNS && msg.gotSaddr {
-							d.AuditMarshaller.getDns(msg)
+							getDns(msg)
 						}
 						d.AuditMarshaller.completeMessage(seq)
 					}
@@ -105,4 +105,13 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 
 		}
 	}
+}
+
+func getDns(val *AuditMessageGroup) (ip string, host []byte) {
+	for _, msg := range val.Msgs {
+		if msg.Type == SOCKADDR {
+			ip, host = val.mapDns(msg)
+		}
+	}
+	return ip, host
 }

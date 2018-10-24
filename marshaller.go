@@ -85,34 +85,29 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 
 	val, ok := a.msgs[aMsg.Seq]
 
-	if ok && nlMsg.Header.Type == EVENT_EOE && (val.gotDNS || !val.gotSaddr){
+	if ok && nlMsg.Header.Type == EVENT_EOE && (val.gotDNS || !val.gotSaddr) {
 		a.completeMessage(aMsg.Seq)
 		return
 	}
 
 	if ok {
-		// mark if we don't have dns yet
-		if val.gotSaddr && !val.gotDNS {
-			ip, _ := a.getDns(val)
-				a.waitingForDNS[ip] = val.Seq
+		if aMsg.Type == SOCKADDR {
+			val.mapDns(aMsg)
 		}
 
 		val.AddMessage(aMsg)
+
+		// mark if we don't have dns yet
+		if val.gotSaddr && !val.gotDNS {
+			ip, _ := val.mapDns(aMsg)
+			a.waitingForDNS[ip] = val.Seq
+		}
 	} else {
 		// Create a new AuditMessageGroup
 		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
 	}
 
 	a.flushOld()
-}
-
-func (a *AuditMarshaller) getDns(val *AuditMessageGroup) (ip string, host []byte) {
-	for _, msg := range val.Msgs {
-		if msg.Type == SOCKADDR {
-			ip, host = val.mapDns(msg)
-		}
-	}
-	return ip, host
 }
 
 // Outputs any messages that are old enough

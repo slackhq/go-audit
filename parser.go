@@ -105,8 +105,6 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	switch am.Type {
 	case EXECVE, CWD:
 		// Don't map uids here
-	case SOCKADDR:
-		amg.mapDns(am)
 	case SYSCALL:
 		amg.findSyscall(am)
 		amg.mapUids(am)
