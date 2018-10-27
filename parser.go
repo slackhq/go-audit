@@ -2,10 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 
-	//	"fmt"
-	"net"
 	"os/user"
 	"strconv"
 	"strings"
@@ -45,8 +42,6 @@ type AuditMessageGroup struct {
 	UidMap        map[string]string `json:"uid_map"`
 	DnsMap        map[string]string `json:"dnstap"`
 	Syscall       string            `json:"-"`
-	gotSaddr      bool
-	gotDNS        bool
 }
 
 // Creates a new message group from the details parsed from the message
@@ -111,56 +106,6 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	default:
 		amg.mapUids(am)
 	}
-}
-
-// Find all `saddr=` occurrences in a message and do a lookup
-func (amg *AuditMessageGroup) mapDns(am *AuditMessage) (ip string, host []byte) {
-	data := am.Data
-	start := 0
-	end := 0
-
-	if start = strings.Index(data, "saddr="); start < 0 {
-		return
-	}
-
-	// Progress the start point beyond the = sign
-	start += 6
-	if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
-		end = len(data) - start
-		if end > SOCKADDR_LENGTH {
-			return
-		}
-	}
-
-	saddr := data[start : start+end]
-
-	amg.gotSaddr = true
-
-	var err error
-
-	ip = parseAddr(saddr)
-
-	host, err = c.Get(ip)
-	if err == nil {
-		amg.gotDNS = true
-		amg.DnsMap[ip] = string(host)
-		//amg.DnsMap["time"] = fmt.Sprintf("%v", time.Now().Unix())
-	}
-	return
-}
-
-func parseAddr(saddr string) (addr string) {
-	switch family := saddr[0:4]; family {
-	// 0200: ipv4
-	case "0200":
-		b, err := hex.DecodeString(saddr[8:16])
-		if err != nil {
-			el.Printf("unable to decode hex to bytes: %s", err)
-		}
-		addr = net.IP(b).String()
-	}
-
-	return addr
 }
 
 // Find all `uid=` occurrences in a message and adds the username to the UidMap object

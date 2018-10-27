@@ -13,7 +13,7 @@ import (
 )
 
 type DnsTapClient struct {
-	Listener        net.Listener
+	Listener           net.Listener
 	DnsAuditMarshaller *DnsAuditMarshaller
 }
 
@@ -24,7 +24,7 @@ func NewDnsTapClient(socket string, am *DnsAuditMarshaller) (*DnsTapClient, erro
 		return nil, fmt.Errorf("Listen error: %s", err)
 	}
 	d := &DnsTapClient{
-		Listener:        listener,
+		Listener:           listener,
 		DnsAuditMarshaller: am,
 	}
 	l.Printf("Started dnstap listener, opened input socket: %s", socket)
@@ -80,12 +80,12 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 			switch m.Answer[i].Header().Rrtype {
 			case dns.TypeA:
 				ipv4 := m.Answer[i].(*dns.A).A.String()
-				c.Set(ipv4, []byte(host))
+				d.DnsAuditMarshaller.cache.Set(ipv4, []byte(host))
 				//	el.Printf("Setting ipv4 for %s -> %s @ %v", host, ipv4, time.Now().Unix())
 				if seq, ok := d.DnsAuditMarshaller.waitingForDNS[ipv4]; ok {
 					if msg, ok := d.DnsAuditMarshaller.msgs[seq]; ok {
-						if !msg.gotDNS && msg.gotSaddr {
-							getDns(msg)
+						if !d.DnsAuditMarshaller.gotDNS[seq] && d.DnsAuditMarshaller.gotSaddr[seq] {
+							d.DnsAuditMarshaller.getDNS(msg)
 						}
 						d.DnsAuditMarshaller.completeMessage(seq)
 					}
@@ -93,11 +93,10 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 				}
 			case dns.TypeAAAA:
 				ipv6 := m.Answer[i].(*dns.AAAA).AAAA.String()
-				c.Set(ipv6, []byte(host))
-				//el.Printf("Setting ipv6 for %s -> %s @ %v", host, ipv6, time.Now().Unix())
+				d.DnsAuditMarshaller.cache.Set(ipv6, []byte(host))
 			case dns.TypeCNAME:
 				cname := m.Answer[i].(*dns.CNAME).Target
-				c.Set(cname, []byte(host))
+				d.DnsAuditMarshaller.cache.Set(cname, []byte(host))
 				//el.Printf("Setting cname for %s -> %s @ %v", host, cname, time.Now().Unix())
 			}
 
@@ -105,10 +104,10 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 	}
 }
 
-func getDns(val *AuditMessageGroup) (ip string, host []byte) {
+func (dnsAm *DnsAuditMarshaller) getDNS(val *AuditMessageGroup) (ip string, host []byte) {
 	for _, msg := range val.Msgs {
 		if msg.Type == SOCKADDR {
-			ip, host = val.mapDns(msg)
+			ip, host = dnsAm.mapDns(msg)
 		}
 	}
 	return ip, host

@@ -14,14 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
-	"github.com/allegro/bigcache"
 	"github.com/spf13/viper"
 )
-
-var c *bigcache.BigCache
-var cacheInitErr error
 
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
@@ -366,19 +361,6 @@ func main() {
 	var dnstapClient *DnsTapClient
 
 	if dnstapSckt != "" {
-		cacheCfg := bigcache.Config{
-			Shards:             256,
-			LifeWindow:         time.Second * 300,
-			MaxEntriesInWindow: 1024,
-			MaxEntrySize:       96,
-			HardMaxCacheSize:   10,
-		}
-
-		c, cacheInitErr = bigcache.NewBigCache(cacheCfg)
-
-		if cacheInitErr != nil {
-			el.Fatal(cacheInitErr)
-		}
 
 		DnsMarshaller := NewDnsAuditMarshaller(marshaller)
 
