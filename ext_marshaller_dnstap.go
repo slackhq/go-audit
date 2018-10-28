@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/hex"
 	"net"
+
+	"os"
 	"strconv"
 	"syscall"
 	"time"
@@ -16,8 +18,8 @@ type DnsAuditMarshaller struct {
 	*AuditMarshaller
 	waitingForDNS map[string]int
 	cache         *bigcache.BigCache
-	gotSaddr      map[int]bool
-	gotDNS        map[int]bool
+	GotSaddr      map[int]bool
+	GotDNS        map[int]bool
 }
 
 func NewDnsAuditMarshaller(am *AuditMarshaller) *DnsAuditMarshaller {
@@ -68,7 +70,7 @@ func (a *DnsAuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 
 	val, ok := a.msgs[aMsg.Seq]
 
-	if ok && nlMsg.Header.Type == EVENT_EOE && (a.gotDNS[aMsg.Seq] || !a.gotSaddr[aMsg.Seq]) {
+	if ok && nlMsg.Header.Type == EVENT_EOE && (a.GotDNS[aMsg.Seq] || !a.GotSaddr[aMsg.Seq]) {
 		a.completeMessage(aMsg.Seq)
 		return
 	}
@@ -81,10 +83,17 @@ func (a *DnsAuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		val.AddMessage(aMsg)
 
 		// Mark if we don't have dns yet
-		if a.gotSaddr[aMsg.Seq] && !a.gotDNS[aMsg.Seq] {
+		if a.GotSaddr[aMsg.Seq] && !a.GotDNS[aMsg.Seq] {
 			ip, _ := a.mapDns(aMsg)
 			a.waitingForDNS[ip] = val.Seq
 		}
+
+		for i, m := range val.Msgs {
+			if m.Type == EVENT_EOE {
+				val.Msgs = append(val.Msgs[:i], val.Msgs[i+1:]...)
+			}
+		}
+
 	} else {
 		// Create a new AuditMessageGroup
 		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
@@ -114,7 +123,7 @@ func (dnsAm *DnsAuditMarshaller) mapDns(am *AuditMessage) (ip string, host []byt
 
 	saddr := data[start : start+end]
 
-	dnsAm.gotSaddr[am.Seq] = true
+	dnsAm.GotSaddr[am.Seq] = true
 
 	var err error
 
@@ -123,10 +132,12 @@ func (dnsAm *DnsAuditMarshaller) mapDns(am *AuditMessage) (ip string, host []byt
 
 	dnsAm.msgs[am.Seq].DnsMap["ip"] = ip
 	dnsAm.msgs[am.Seq].DnsMap["port"] = strconv.FormatInt(port, 10)
+	//dnsAm.msgs[am.Seq].DnsMap["GotSaddr"] = "true"
 
 	host, err = dnsAm.cache.Get(ip)
 	if err == nil {
-		dnsAm.gotDNS[am.Seq] = true
+		// dnsAm.GotDNS[am.Seq] = true
+		// dnsAm.msgs[am.Seq].DnsMap["GotDNS"] = "true"
 		dnsAm.msgs[am.Seq].DnsMap["record"] = string(host)
 	}
 	return
@@ -163,7 +174,6 @@ func parsePortIpv4(saddr string) int64 {
 
 func parseAddr(saddr string) (addr string) {
 	family := parseFamily(saddr)
-	//el.Println("FAM:", family)
 
 	switch family {
 	case 2:
@@ -175,4 +185,41 @@ func parseAddr(saddr string) (addr string) {
 	}
 
 	return addr
+}
+
+func (a *DnsAuditMarshaller) completeMessage(seq int) {
+	var msg *AuditMessageGroup
+	var ok bool
+
+	if msg, ok = a.msgs[seq]; !ok {
+		//TODO: attempted to complete a missing message, log?
+		return
+	}
+
+	if a.GotSaddr[seq] && !a.GotDNS[seq] {
+		a.getDNS(msg)
+	}
+
+	if a.dropMessage(msg) {
+		delete(a.msgs, seq)
+		return
+	}
+
+	if err := a.writer.Write(msg); err != nil {
+		el.Println("Failed to write message. Error:", err)
+		os.Exit(1)
+	}
+
+	delete(a.msgs, seq)
+}
+
+// Outputs any messages that are old enough
+// This is because there is no indication of multi message events coming from kaudit
+func (a *DnsAuditMarshaller) flushOld() {
+	now := time.Now()
+	for seq, msg := range a.msgs {
+		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {
+			a.completeMessage(seq)
+		}
+	}
 }
