@@ -80,18 +80,14 @@ func (a *DnsAuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 			a.mapDns(aMsg)
 		}
 
-		val.AddMessage(aMsg)
-
 		// Mark if we don't have dns yet
 		if a.GotSaddr[aMsg.Seq] && !a.GotDNS[aMsg.Seq] {
 			ip, _ := a.mapDns(aMsg)
 			a.waitingForDNS[ip] = val.Seq
 		}
 
-		for i, m := range val.Msgs {
-			if m.Type == EVENT_EOE {
-				val.Msgs = append(val.Msgs[:i], val.Msgs[i+1:]...)
-			}
+		if aMsg.Type != EVENT_EOE {
+			val.AddMessage(aMsg)
 		}
 
 	} else {
