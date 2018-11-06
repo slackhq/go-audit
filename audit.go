@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/allegro/bigcache"
+
 	"github.com/spf13/viper"
 )
 
@@ -344,7 +346,7 @@ func main() {
 		el.Fatal(err)
 	}
 
-	dnstapSckt := config.GetString("dnstap.socket")
+	dnstapEnabled := config.GetBool("dnstap.enabled")
 
 	marshaller := NewAuditMarshaller(
 		writer,
@@ -360,9 +362,17 @@ func main() {
 
 	var dnstapClient *DnsTapClient
 
-	if dnstapSckt != "" {
+	if dnstapEnabled {
+		dnstapSckt := config.GetString("dnstap.socket")
+		cacheCfg := bigcache.Config{
+			LifeWindow:         config.GetDuration("dnstap.record_ttl"),
+			HardMaxCacheSize:   config.GetInt("dnstap.max_cache_size"),
+			MaxEntrySize:       96,
+			MaxEntriesInWindow: 1024,
+			Shards:             256,
+		}
 
-		DnsMarshaller := NewDnsAuditMarshaller(marshaller)
+		DnsMarshaller := NewDnsAuditMarshaller(marshaller, cacheCfg)
 
 		dnstapClient, err = NewDnsTapClient(dnstapSckt, DnsMarshaller)
 		if err != nil {

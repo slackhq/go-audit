@@ -22,15 +22,7 @@ type DnsAuditMarshaller struct {
 	GotDNS        map[int]bool
 }
 
-func NewDnsAuditMarshaller(am *AuditMarshaller) *DnsAuditMarshaller {
-	cacheCfg := bigcache.Config{
-		Shards:             256,
-		LifeWindow:         time.Second * 300,
-		MaxEntriesInWindow: 1024,
-		MaxEntrySize:       96,
-		HardMaxCacheSize:   10,
-	}
-
+func NewDnsAuditMarshaller(am *AuditMarshaller, cacheCfg bigcache.Config) *DnsAuditMarshaller {
 	c, cacheInitErr := bigcache.NewBigCache(cacheCfg)
 
 	if cacheInitErr != nil {

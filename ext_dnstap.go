@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	//	"time"
-
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
 	"github.com/golang/protobuf/proto"
@@ -25,6 +23,7 @@ func NewDnsTapClient(socket string, am *DnsAuditMarshaller) (*DnsTapClient, erro
 	if err != nil {
 		return nil, fmt.Errorf("Listen error: %s", err)
 	}
+
 	d := &DnsTapClient{
 		Listener:           listener,
 		DnsAuditMarshaller: am,
