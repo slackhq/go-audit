@@ -124,17 +124,10 @@ func (dnsAm *DnsAuditMarshaller) mapDns(am *AuditMessage) (ip string, host []byt
 	var err error
 
 	ip = parseAddr(saddr)
-	port := parsePortIpv4(saddr)
-
-	dnsAm.msgs[am.Seq].DnsMap["ip"] = ip
-	dnsAm.msgs[am.Seq].DnsMap["port"] = strconv.FormatInt(port, 10)
-	//dnsAm.msgs[am.Seq].DnsMap["GotSaddr"] = "true"
 
 	host, err = dnsAm.cache.Get(ip)
 	if err == nil {
-		// dnsAm.GotDNS[am.Seq] = true
-		// dnsAm.msgs[am.Seq].DnsMap["GotDNS"] = "true"
-		dnsAm.msgs[am.Seq].DnsMap["record"] = string(host)
+		dnsAm.msgs[am.Seq].DnsMap[ip] = string(host)
 	}
 	return
 }
