@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+
 	"os/user"
 	"strconv"
 	"strings"
@@ -9,16 +10,22 @@ import (
 	"time"
 )
 
+const (
+	SYSCALL           = 1300            // Syscall event
+	CONFIG_CHANGE     = 1305            // Audit system configuration change
+	SOCKADDR          = 1306            // Sockaddr copied as syscall arg
+	CWD               = 1307            // Current working directory
+	EXECVE            = 1309            // Execve arguments
+	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
+	HEADER_START_POS  = 6               // Position in the audit header that the data starts
+	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
+	SOCKADDR_LENGTH   = 34              // Length of saddr event
+)
+
 var uidMap = map[string]string{}
 var headerEndChar = []byte{")"[0]}
 var headerSepChar = byte(':')
 var spaceChar = byte(' ')
-
-const (
-	HEADER_MIN_LENGTH = 7               // Minimum length of an audit header
-	HEADER_START_POS  = 6               // Position in the audit header that the data starts
-	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
-)
 
 type AuditMessage struct {
 	Type      uint16 `json:"type"`
@@ -33,6 +40,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
+	DnsMap        map[string]string `json:"dnstap"`
 	Syscall       string            `json:"-"`
 }
 
@@ -44,6 +52,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 		AuditTime:     am.AuditTime,
 		CompleteAfter: time.Now().Add(COMPLETE_AFTER),
 		UidMap:        make(map[string]string, 2), // Usually only 2 individual uids per execve
+		DnsMap:        make(map[string]string, 1),
 		Msgs:          make([]*AuditMessage, 0, 6),
 	}
 
@@ -89,9 +98,9 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307, 1306:
+	case EXECVE, CWD, SOCKADDR:
 		// Don't map uids here
-	case 1300:
+	case SYSCALL:
 		amg.findSyscall(am)
 		amg.mapUids(am)
 	default:
@@ -110,7 +119,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 			break
 		}
 
-		// Progress the start point beyon the = sign
+		// Progress the start point beyond the = sign
 		start += 4
 		if end = strings.IndexByte(data[start:], spaceChar); end < 0 {
 			// There was no ending space, maybe the uid is at the end of the line
