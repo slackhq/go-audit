@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/user"
+	"strconv"
 	"strings"
 
 	"github.com/dnstap/golang-dnstap"
 	"github.com/farsightsec/golang-framestream"
 	"github.com/golang/protobuf/proto"
 	"github.com/miekg/dns"
+	"github.com/spf13/viper"
 )
 
 type DnsTapClient struct {
@@ -17,18 +20,46 @@ type DnsTapClient struct {
 	DnsAuditMarshaller *DnsAuditMarshaller
 }
 
-func NewDnsTapClient(socket string, am *DnsAuditMarshaller) (*DnsTapClient, error) {
+func NewDnsTapClient(config *viper.Viper, am *DnsAuditMarshaller) (*DnsTapClient, error) {
+	socket := config.GetString("dnstap.socket")
 	os.Remove(socket)
+
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("Listen error: %s", err)
+	}
+
+	socketOwner := config.GetString("dnstap.socket_owner")
+
+	u, err := user.Lookup(socketOwner)
+	if err != nil {
+		return nil, fmt.Errorf("Could not find uid for user %s. Error: %s", socketOwner, err)
+	}
+
+	uid, err := strconv.ParseInt(u.Uid, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("Found uid could not be parsed. Error: %s", err)
+	}
+
+	g, err := user.LookupGroup(socketOwner)
+	if err != nil {
+		return nil, fmt.Errorf("Could not find gid for group %s. Error: %s", socketOwner, err)
+	}
+
+	gid, err := strconv.ParseInt(g.Gid, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("Found gid could not be parsed. Error: %s", err)
+	}
+
+	if err = os.Chown(socket, int(uid), int(gid)); err != nil {
+		return nil, fmt.Errorf("Could not chown output file. Error: %s", err)
 	}
 
 	d := &DnsTapClient{
 		Listener:           listener,
 		DnsAuditMarshaller: am,
 	}
-	l.Printf("Started dnstap listener, opened input socket: %s", socket)
+	el.Printf("Started dnstap listener, opened input socket: %s", socket)
 	return d, nil
 }
 

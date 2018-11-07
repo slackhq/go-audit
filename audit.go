@@ -363,7 +363,6 @@ func main() {
 	var dnstapClient *DnsTapClient
 
 	if dnstapEnabled {
-		dnstapSckt := config.GetString("dnstap.socket")
 		cacheCfg := bigcache.Config{
 			LifeWindow:         config.GetDuration("dnstap.record_ttl"),
 			HardMaxCacheSize:   config.GetInt("dnstap.max_cache_size"),
@@ -374,7 +373,7 @@ func main() {
 
 		DnsMarshaller := NewDnsAuditMarshaller(marshaller, cacheCfg)
 
-		dnstapClient, err = NewDnsTapClient(dnstapSckt, DnsMarshaller)
+		dnstapClient, err = NewDnsTapClient(config, DnsMarshaller)
 		if err != nil {
 			el.Fatal(err)
 		}
