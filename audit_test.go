@@ -156,7 +156,8 @@ func Test_createFileOutput(t *testing.T) {
 	// chown error
 	c = viper.New()
 	c.Set("output.file.attempts", 1)
-	c.Set("output.file.path", path.Join(os.TempDir(), "go-audit.test.log"))
+	testLogFile := path.Join(os.TempDir(), "go-audit.test.log")
+	c.Set("output.file.path", testLogFile)
 	c.Set("output.file.mode", 0644)
 	c.Set("output.file.user", "root")
 	c.Set("output.file.group", "root")
@@ -315,8 +316,10 @@ func Test_createOutput(t *testing.T) {
 	w, err = createOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
+	w.mutex.Lock()
 	assert.IsType(t, &AuditWriter{}, w)
 	assert.IsType(t, &os.File{}, w.w)
+	w.mutex.Unlock()
 
 	// File rotation
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
