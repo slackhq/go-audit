@@ -317,7 +317,7 @@ func Test_createOutput(t *testing.T) {
 	w, err = createOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &audit.AuditWriter{}, w)
+	assert.IsType(t, &audit.JSONAuditWriter{}, w)
 	assert.IsType(t, &os.File{}, w.IOWriter())
 
 	// File rotation

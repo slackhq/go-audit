@@ -13,7 +13,7 @@ const (
 
 type AuditMarshaller struct {
 	msgs          map[int]*AuditMessageGroup
-	writer        *AuditWriter
+	writer        AuditWriter
 	lastSeq       int
 	missed        map[int]bool
 	worstLag      int
@@ -37,7 +37,7 @@ func NewAuditFilter(messageType uint16, regex *regexp.Regexp, syscall string) Au
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time

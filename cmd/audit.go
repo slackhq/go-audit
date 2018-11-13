@@ -78,8 +78,8 @@ func setRules(config *viper.Viper, e executor) error {
 	return nil
 }
 
-func createOutput(config *viper.Viper) (*audit.AuditWriter, error) {
-	var writer *audit.AuditWriter
+func createOutput(config *viper.Viper) (*audit.JSONAuditWriter, error) {
+	var writer *audit.JSONAuditWriter
 	var err error
 	i := 0
 
@@ -120,7 +120,7 @@ func createOutput(config *viper.Viper) (*audit.AuditWriter, error) {
 	return writer, nil
 }
 
-func createSyslogOutput(config *viper.Viper) (*audit.AuditWriter, error) {
+func createSyslogOutput(config *viper.Viper) (*audit.JSONAuditWriter, error) {
 	attempts := config.GetInt("output.syslog.attempts")
 	if attempts < 1 {
 		return nil, fmt.Errorf("Output attempts for syslog must be at least 1, %v provided", attempts)
@@ -140,7 +140,7 @@ func createSyslogOutput(config *viper.Viper) (*audit.AuditWriter, error) {
 	return audit.NewAuditWriter(syslogWriter, attempts), nil
 }
 
-func createFileOutput(config *viper.Viper) (*audit.AuditWriter, error) {
+func createFileOutput(config *viper.Viper) (*audit.JSONAuditWriter, error) {
 	attempts := config.GetInt("output.file.attempts")
 	if attempts < 1 {
 		return nil, fmt.Errorf("Output attempts for file must be at least 1, %v provided", attempts)
@@ -193,7 +193,7 @@ func createFileOutput(config *viper.Viper) (*audit.AuditWriter, error) {
 	return audit.NewAuditWriter(f, attempts), nil
 }
 
-func handleLogRotation(config *viper.Viper, writer *audit.AuditWriter) {
+func handleLogRotation(config *viper.Viper, writer *audit.JSONAuditWriter) {
 	// Re-open our log file. This is triggered by a USR1 signal and is meant to be used upon log rotation
 
 	sigc := make(chan os.Signal, 1)
@@ -215,7 +215,7 @@ func handleLogRotation(config *viper.Viper, writer *audit.AuditWriter) {
 	}
 }
 
-func createStdOutOutput(config *viper.Viper) (*audit.AuditWriter, error) {
+func createStdOutOutput(config *viper.Viper) (*audit.JSONAuditWriter, error) {
 	attempts := config.GetInt("output.stdout.attempts")
 	if attempts < 1 {
 		return nil, fmt.Errorf("Output attempts for stdout must be at least 1, %v provided", attempts)
