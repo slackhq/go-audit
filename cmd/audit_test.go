@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/slackhq/go-audit"
+	"github.com/slackhq/go-audit/internal/test"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,8 +35,8 @@ func Test_loadConfig(t *testing.T) {
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
 	assert.Equal(t, 3, config.GetInt("output.syslog.attempts"), "output.syslog.attempts should default to 3")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
-	assert.Equal(t, 0, l.Flags(), "stdout log flags was wrong")
-	assert.Equal(t, 0, el.Flags(), "stderr log flags was wrong")
+	assert.Equal(t, 0, audit.Std.Flags(), "stdout log flags was wrong")
+	assert.Equal(t, 0, audit.Stderr.Flags(), "stderr log flags was wrong")
 	assert.Nil(t, err)
 
 	// parse error
@@ -45,7 +47,7 @@ func Test_loadConfig(t *testing.T) {
 }
 
 func Test_setRules(t *testing.T) {
-	defer resetLogger()
+	defer test.ResetLogger(audit.Std, audit.Stderr)
 
 	// fail to flush rules
 	config := viper.New()
@@ -174,7 +176,7 @@ func Test_createFileOutput(t *testing.T) {
 	w, err = createFileOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &os.File{}, w.w)
+	assert.IsType(t, &os.File{}, w.IOWriter())
 }
 
 func Test_createSyslogOutput(t *testing.T) {
@@ -208,7 +210,7 @@ func Test_createSyslogOutput(t *testing.T) {
 	w, err = createSyslogOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &syslog.Writer{}, w.w)
+	assert.IsType(t, &syslog.Writer{}, w.IOWriter())
 }
 
 func Test_createStdOutOutput(t *testing.T) {
@@ -225,7 +227,7 @@ func Test_createStdOutOutput(t *testing.T) {
 	w, err = createStdOutOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &os.File{}, w.w)
+	assert.IsType(t, &os.File{}, w.IOWriter())
 }
 
 func Test_createOutput(t *testing.T) {
@@ -302,7 +304,7 @@ func Test_createOutput(t *testing.T) {
 	w, err = createSyslogOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &syslog.Writer{}, w.w)
+	assert.IsType(t, &syslog.Writer{}, w.IOWriter())
 
 	// All good file
 	c = viper.New()
@@ -315,8 +317,8 @@ func Test_createOutput(t *testing.T) {
 	w, err = createOutput(c)
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
-	assert.IsType(t, &AuditWriter{}, w)
-	assert.IsType(t, &os.File{}, w.w)
+	assert.IsType(t, &audit.JSONAuditWriter{}, w)
+	assert.IsType(t, &os.File{}, w.IOWriter())
 
 	// File rotation
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
@@ -329,8 +331,8 @@ func Test_createOutput(t *testing.T) {
 }
 
 func Test_createFilters(t *testing.T) {
-	lb, elb := hookLogger()
-	defer resetLogger()
+	lb, elb := test.HookLogger(audit.Std, audit.Stderr)
+	defer test.ResetLogger(audit.Std, audit.Stderr)
 
 	// no filters
 	c := viper.New()
@@ -425,9 +427,9 @@ func Test_createFilters(t *testing.T) {
 	f, err = createFilters(c)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
-	assert.Equal(t, "1", f[0].syscall)
-	assert.Equal(t, uint16(1), f[0].messageType)
-	assert.Equal(t, "1", f[0].regex.String())
+	assert.Equal(t, "1", f[0].Syscall)
+	assert.Equal(t, uint16(1), f[0].MessageType)
+	assert.Equal(t, "1", f[0].Regex.String())
 	assert.Empty(t, elb.String())
 	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
 
@@ -441,15 +443,15 @@ func Test_createFilters(t *testing.T) {
 	f, err = createFilters(c)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
-	assert.Equal(t, "1", f[0].syscall)
-	assert.Equal(t, uint16(1), f[0].messageType)
-	assert.Equal(t, "1", f[0].regex.String())
+	assert.Equal(t, "1", f[0].Syscall)
+	assert.Equal(t, uint16(1), f[0].MessageType)
+	assert.Equal(t, "1", f[0].Regex.String())
 	assert.Empty(t, elb.String())
 	assert.Equal(t, "Ignoring syscall `1` containing message type `1` matching string `1`\n", lb.String())
 }
 
 func Benchmark_MultiPacketMessage(b *testing.B) {
-	marshaller := NewAuditMarshaller(NewAuditWriter(&noopWriter{}, 1), uint16(1300), uint16(1399), false, false, 1, []AuditFilter{})
+	marshaller := audit.NewAuditMarshaller(audit.NewAuditWriter(&noopWriter{}, 1), uint16(1300), uint16(1399), false, false, 1, []audit.AuditFilter{})
 
 	data := make([][]byte, 6)
 
@@ -476,11 +478,11 @@ func Benchmark_MultiPacketMessage(b *testing.B) {
 			nlen := len(data[n])
 			msg := &syscall.NetlinkMessage{
 				Header: syscall.NlMsghdr{
-					Len:   Endianness.Uint32(data[n][0:4]),
-					Type:  Endianness.Uint16(data[n][4:6]),
-					Flags: Endianness.Uint16(data[n][6:8]),
-					Seq:   Endianness.Uint32(data[n][8:12]),
-					Pid:   Endianness.Uint32(data[n][12:16]),
+					Len:   audit.Endianness.Uint32(data[n][0:4]),
+					Type:  audit.Endianness.Uint16(data[n][4:6]),
+					Flags: audit.Endianness.Uint16(data[n][6:8]),
+					Seq:   audit.Endianness.Uint32(data[n][8:12]),
+					Pid:   audit.Endianness.Uint32(data[n][12:16]),
 				},
 				Data: data[n][syscall.SizeofNlMsghdr:nlen],
 			}

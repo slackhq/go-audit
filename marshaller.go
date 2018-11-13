@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"os"
@@ -13,7 +13,7 @@ const (
 
 type AuditMarshaller struct {
 	msgs          map[int]*AuditMessageGroup
-	writer        *AuditWriter
+	writer        AuditWriter
 	lastSeq       int
 	missed        map[int]bool
 	worstLag      int
@@ -23,17 +23,21 @@ type AuditMarshaller struct {
 	logOutOfOrder bool
 	maxOutOfOrder int
 	attempts      int
-	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+	filters       map[string]map[uint16][]*regexp.Regexp // { Syscall: { mtype: [regexp, ...] } }
 }
 
 type AuditFilter struct {
-	messageType uint16
-	regex       *regexp.Regexp
-	syscall     string
+	MessageType uint16
+	Regex       *regexp.Regexp
+	Syscall     string
+}
+
+func NewAuditFilter(messageType uint16, regex *regexp.Regexp, syscall string) AuditFilter {
+	return AuditFilter{MessageType: messageType, Regex: regex, Syscall: syscall}
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
@@ -47,15 +51,15 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 	}
 
 	for _, filter := range filters {
-		if _, ok := am.filters[filter.syscall]; !ok {
-			am.filters[filter.syscall] = make(map[uint16][]*regexp.Regexp)
+		if _, ok := am.filters[filter.Syscall]; !ok {
+			am.filters[filter.Syscall] = make(map[uint16][]*regexp.Regexp)
 		}
 
-		if _, ok := am.filters[filter.syscall][filter.messageType]; !ok {
-			am.filters[filter.syscall][filter.messageType] = []*regexp.Regexp{}
+		if _, ok := am.filters[filter.Syscall][filter.MessageType]; !ok {
+			am.filters[filter.Syscall][filter.MessageType] = []*regexp.Regexp{}
 		}
 
-		am.filters[filter.syscall][filter.messageType] = append(am.filters[filter.syscall][filter.messageType], filter.regex)
+		am.filters[filter.Syscall][filter.MessageType] = append(am.filters[filter.Syscall][filter.MessageType], filter.Regex)
 	}
 
 	return &am
@@ -123,7 +127,7 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 	}
 
 	if err := a.writer.Write(msg); err != nil {
-		el.Println("Failed to write message. Error:", err)
+		Stderr.Println("Failed to write message. Error:", err)
 		os.Exit(1)
 	}
 
@@ -166,11 +170,11 @@ func (a *AuditMarshaller) detectMissing(seq int) {
 			}
 
 			if a.logOutOfOrder {
-				el.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
+				Stderr.Println("Got sequence", missedSeq, "after", lag, "messages. Worst lag so far", a.worstLag, "messages")
 			}
 			delete(a.missed, missedSeq)
 		} else if seq-missedSeq > a.maxOutOfOrder {
-			el.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
+			Stderr.Printf("Likely missed sequence %d, current %d, worst message delay %d\n", missedSeq, seq, a.worstLag)
 			delete(a.missed, missedSeq)
 		}
 	}

@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"bytes"
@@ -126,8 +126,8 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	// lb, elb := hookLogger()
 	// m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
 
-	// m.Consume(&syscall.NetlinkMessage{
-	// 	Header: syscall.NlMsghdr{
+	// m.Consume(&Syscall.NetlinkMessage{
+	// 	Header: Syscall.NlMsghdr{
 	// 		Len:   uint32(44),
 	// 		Type:  uint16(1300),
 	// 		Flags: uint16(0),

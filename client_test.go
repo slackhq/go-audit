@@ -1,12 +1,13 @@
-package main
+package audit
 
 import (
-	"bytes"
 	"encoding/binary"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/slackhq/go-audit/internal/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
@@ -29,8 +30,8 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 	assert.EqualValues(t, msg.Data[:40], expectedData, "data was wrong")
 
 	// Make sure we get errors printed
-	lb, elb := hookLogger()
-	defer resetLogger()
+	lb, elb := test.HookLogger(Std, Stderr)
+	defer test.ResetLogger(Std, Stderr)
 	syscall.Close(n.fd)
 	n.KeepConnection()
 	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
@@ -88,8 +89,8 @@ func TestNetlinkClient_SendReceive(t *testing.T) {
 }
 
 func TestNewNetlinkClient(t *testing.T) {
-	lb, elb := hookLogger()
-	defer resetLogger()
+	lb, elb := test.HookLogger(Std, Stderr)
+	defer test.ResetLogger(Std, Stderr)
 
 	n, err := NewNetlinkClient(1024)
 
@@ -142,20 +143,4 @@ func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload 
 	}
 
 	return msg
-}
-
-// Resets global loggers
-func resetLogger() {
-	l.SetOutput(os.Stdout)
-	el.SetOutput(os.Stderr)
-}
-
-// Hooks the global loggers writers so you can assert their contents
-func hookLogger() (lb *bytes.Buffer, elb *bytes.Buffer) {
-	lb = &bytes.Buffer{}
-	l.SetOutput(lb)
-
-	elb = &bytes.Buffer{}
-	el.SetOutput(elb)
-	return
 }
