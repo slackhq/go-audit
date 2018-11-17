@@ -213,7 +213,7 @@
 			"revisionTime": "2016-05-18T18:29:53Z"
 		},
 		{
-			"checksumSHA1": "8fD/im5Kwvy3JgmxulDTambmE8w=",
+			"checksumSHA1": "Q4W6H1AocwvqFV/MNxSPsO1StcU=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "30de6d19a3bd89a5f38ae4028e23aaa5582648af",
 			"revisionTime": "2016-09-07T05:59:14Z"
@@ -243,16 +243,22 @@
 			"revisionTime": "2016-08-30T13:53:28Z"
 		},
 		{
-			"checksumSHA1": "n94g6qdzv0fgQFGelH4/HXOthl0=",
+			"checksumSHA1": "YW8pmJQwlwnsZiOwXp9JlDYr6l0=",
 			"path": "golang.org/x/text/unicode/cldr",
 			"revision": "f6f58eac0a9f37bcb49f8c8010c24cd382bf862d",
 			"revisionTime": "2016-08-30T13:53:28Z"
 		},
 		{
-			"checksumSHA1": "Aj3JSVO324FCjEAGm4ZwmC79bbo=",
+			"checksumSHA1": "aihk1EHGiDFDRDZuRf5CWqWpcYs=",
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "f6f58eac0a9f37bcb49f8c8010c24cd382bf862d",
 			"revisionTime": "2016-08-30T13:53:28Z"
+		},
+		{
+			"checksumSHA1": "vRPZRox/4JiAmGyEkW9ZNSsKmEc=",
+			"path": "gopkg.in/Graylog2/go-gelf.v2/gelf",
+			"revision": "4dbb9d7213480a8484c02610e3f51ecd9c506a71",
+			"revisionTime": "2018-03-26T13:34:23Z"
 		},
 		{
 			"checksumSHA1": "93uHIq25lffEKY47PV8dBPD+XuQ=",
