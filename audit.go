@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/flate"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/viper"
+	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
 var l = log.New(os.Stdout, "", 0)
@@ -40,6 +42,10 @@ func loadConfig(configFile string) (*viper.Viper, error) {
 	config.SetDefault("output.syslog.priority", int(syslog.LOG_LOCAL0|syslog.LOG_WARNING))
 	config.SetDefault("output.syslog.tag", "go-audit")
 	config.SetDefault("output.syslog.attempts", "3")
+	config.SetDefault("output.gelf.attempts", 3)
+	config.SetDefault("output.gelf.network", "udp")
+	config.SetDefault("output.gelf.compression.level", int(flate.BestSpeed))
+	config.SetDefault("output.gelf.compression.type", int(gelf.CompressGzip))
 	config.SetDefault("log.flags", 0)
 
 	if err := config.ReadInConfig(); err != nil {
@@ -112,6 +118,14 @@ func createOutput(config *viper.Viper) (*AuditWriter, error) {
 		}
 	}
 
+	if config.GetBool("output.gelf.enabled") == true {
+		i++
+		writer, err = createGELFOutput(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if i > 1 {
 		return nil, errors.New("Only one output can be enabled at a time")
 	}
@@ -121,6 +135,41 @@ func createOutput(config *viper.Viper) (*AuditWriter, error) {
 	}
 
 	return writer, nil
+}
+
+func createGELFOutput(config *viper.Viper) (*AuditWriter, error) {
+	attempts := config.GetInt("output.gelf.attempts")
+	if attempts < 1 {
+		return nil, fmt.Errorf("Output attempts for GELF must be at least 1, %v provided", attempts)
+	}
+
+	address := config.GetString("output.gelf.address")
+	if address == "" {
+		return nil, fmt.Errorf("Output address for GELF must be set")
+	}
+
+	switch config.GetString("output.gelf.network") {
+	case "udp":
+		writer, err := gelf.NewUDPWriter(address)
+		if err != nil {
+			return nil, err
+		}
+
+		writer.CompressionType = gelf.CompressType(config.GetInt("output.gelf.compression.type"))
+		writer.CompressionLevel = config.GetInt("output.gelf.compression.level")
+
+		return NewAuditWriter(writer, attempts), nil
+	case "tcp":
+		writer, err := gelf.NewTCPWriter(address)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewAuditWriter(writer, attempts), nil
+	default:
+		return nil, fmt.Errorf("unsupported network by GELF library")
+	}
+
 }
 
 func createSyslogOutput(config *viper.Viper) (*AuditWriter, error) {
