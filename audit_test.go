@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/flate"
 	"errors"
 	"io/ioutil"
 	"log/syslog"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
 func Test_loadConfig(t *testing.T) {
@@ -32,6 +34,11 @@ func Test_loadConfig(t *testing.T) {
 	assert.Equal(t, 132, config.GetInt("output.syslog.priority"), "output.syslog.priority should default to 132")
 	assert.Equal(t, "go-audit", config.GetString("output.syslog.tag"), "output.syslog.tag should default to go-audit")
 	assert.Equal(t, 3, config.GetInt("output.syslog.attempts"), "output.syslog.attempts should default to 3")
+	assert.Equal(t, false, config.GetBool("output.gelf.enabled"), "output.gelf.enabled should default to false")
+	assert.Equal(t, 3, config.GetInt("output.gelf.attempts"), "output.gelf.attempts should default to 3")
+	assert.Equal(t, "udp", config.GetString("output.gelf.network"), "output.gelf.network should default to udp")
+	assert.Equal(t, int(flate.BestSpeed), config.GetInt("output.gelf.compression.level"), "output.gelf.compression.level should default to flate.BestSpeed")
+	assert.Equal(t, int(gelf.CompressGzip), config.GetInt("output.gelf.compression.type"), "output.gelf.compression.type should default to gelf.CompressGzip")
 	assert.Equal(t, 0, config.GetInt("log.flags"), "log.flags should default to 0")
 	assert.Equal(t, 0, l.Flags(), "stdout log flags was wrong")
 	assert.Equal(t, 0, el.Flags(), "stderr log flags was wrong")
@@ -226,6 +233,90 @@ func Test_createStdOutOutput(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, w)
 	assert.IsType(t, &os.File{}, w.w)
+}
+
+func Test_createGELFOutput(t *testing.T) {
+	t.Run("When attempts is less than one, should retun an expected error", func(t *testing.T) {
+		c := viper.New()
+		c.Set("output.gelf.attempts", 0)
+		w, err := createGELFOutput(c)
+		assert.EqualError(t, err, "Output attempts for GELF must be at least 1, 0 provided")
+		assert.Nil(t, w)
+	})
+
+	t.Run("When address is not set, should return an expected error", func(t *testing.T) {
+		c := viper.New()
+		c.Set("output.gelf.attempts", 3)
+		w, err := createGELFOutput(c)
+		assert.EqualError(t, err, "Output address for GELF must be set")
+		assert.Nil(t, w)
+	})
+
+	t.Run("When using UDP network, should return a gelf.UDPWriter writer", func(t *testing.T) {
+		l, err := net.ListenUDP("udp", &net.UDPAddr{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer l.Close()
+
+		c := viper.New()
+		c.Set("output.gelf.attempts", 3)
+		c.Set("output.gelf.network", "udp")
+		c.Set("output.gelf.address", l.LocalAddr().String())
+		writer, err := createGELFOutput(c)
+		assert.Nil(t, err)
+		assert.IsType(t, &gelf.UDPWriter{}, writer.w)
+	})
+
+	t.Run("When using TCP network, should return a gelf.TCPWriter writer", func(t *testing.T) {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer l.Close()
+
+		c := viper.New()
+		c.Set("output.gelf.attempts", 3)
+		c.Set("output.gelf.network", "tcp")
+		c.Set("output.gelf.address", l.Addr().String())
+		writer, err := createGELFOutput(c)
+		assert.Nil(t, err)
+		assert.Equal(t, writer.attempts, 3)
+		assert.IsType(t, &gelf.TCPWriter{}, writer.w)
+	})
+
+	t.Run("When using an unsupported network (not UDP or TCP), should return an expected error", func(t *testing.T) {
+		c := viper.New()
+		c.Set("output.gelf.attempts", 3)
+		c.Set("output.gelf.address", "/var/run/gelf.sock")
+
+		unsupportedNetworks := []string{"unix", "unixgram", "unixpacket"}
+
+		for _, network := range unsupportedNetworks {
+			c.Set("output.gelf.network", network)
+			_, err := createGELFOutput(c)
+			assert.EqualError(t, err, "unsupported network by GELF library")
+		}
+	})
+
+	t.Run("When using a custom compreession settings, should return a gelf.UPDWriter with expected compression value", func(t *testing.T) {
+		c := viper.New()
+		c.Set("output.gelf.attempts", 3)
+		c.Set("output.gelf.network", "udp")
+		c.Set("output.gelf.address", "localhost:12201")
+		c.Set("output.gelf.compression.level", int(flate.BestCompression))
+		c.Set("output.gelf.compression.type", int(gelf.CompressZlib))
+
+		w, err := createGELFOutput(c)
+		assert.Nil(t, err)
+
+		udpWriter, ok := w.w.(*gelf.UDPWriter)
+		assert.True(t, ok)
+		assert.Equal(t, udpWriter.CompressionLevel, flate.BestCompression)
+		assert.Equal(t, udpWriter.CompressionType, gelf.CompressZlib)
+	})
 }
 
 func Test_createOutput(t *testing.T) {
