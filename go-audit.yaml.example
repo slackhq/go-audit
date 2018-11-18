@@ -73,6 +73,31 @@ output:
     user: root
     group: root
 
+  # Writes logs to Graylog2 server using GELF standard: http://docs.graylog.org/en/stable/pages/gelf.html
+  gelf:
+    enabled: false
+    attempts: 3
+
+    # Configure the type of socket this should be, this can only be "udp" or "tcp".
+    # Default value is "udp".
+    network: udp
+
+    # Set the remote address to connect to, this can be an IP address or a hostname and port.
+    # This setting is mandatory and has no default value.
+    address: localhost:12201
+
+    # Defines the compression settings when using GELF over UDP network
+    compression:
+      # Sets the level of compression
+      # This maps to `compress/flate` consts: https://godoc.org/compress/flate#pkg-constants
+      # Default value is: 1, which means "BestSpeed"
+      level: 1
+
+      # Configure the compression type the writer should use when sending messages to server
+      # This maps to `CompressionType` into gelf library: https://godoc.org/gopkg.in/Graylog2/go-gelf.v2/gelf#CompressType
+      # Default values is: 0, which means "Gzip"
+      type: 0
+
 # Configure logging, only stdout and stderr are used.
 log:
   # Gives you a bit of control over log line prefixes. Default is 0 - nothing.
