@@ -31,7 +31,11 @@ func NewDnsTapClient(config *viper.Viper, am *DnsAuditMarshaller) (*DnsTapClient
 
 	socketOwner := config.GetString("dnstap.socket_owner")
 
-	chown(socketOwner, socket)
+	err = chown(socketOwner, socket)
+
+	if err != nil {
+		el.Fatal(err)
+	}
 
 	d := &DnsTapClient{
 		Listener:           listener,
