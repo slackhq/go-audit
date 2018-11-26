@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-
 	"os/user"
 	"strconv"
 	"strings"
@@ -20,6 +19,7 @@ const (
 	HEADER_START_POS  = 6               // Position in the audit header that the data starts
 	COMPLETE_AFTER    = time.Second * 2 // Log a message after this time or EOE
 	SOCKADDR_LENGTH   = 34              // Length of saddr event
+	AF_INET           = 2               // Address family for ipv4
 )
 
 var uidMap = map[string]string{}

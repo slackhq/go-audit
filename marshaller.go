@@ -102,7 +102,6 @@ func (a *AuditMarshaller) flushOld() {
 	now := time.Now()
 	for seq, msg := range a.msgs {
 		if msg.CompleteAfter.Before(now) || now.Equal(msg.CompleteAfter) {
-			// a.waitingForDNS = make(map[string]int)
 			a.completeMessage(seq)
 		}
 	}

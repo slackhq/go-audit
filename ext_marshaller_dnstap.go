@@ -139,25 +139,11 @@ func parseFamily(saddr string) int64 {
 
 }
 
-func parsePortIpv4(saddr string) int64 {
-	a, err := strconv.ParseInt(saddr[4:6], 16, 32)
-	if err != nil {
-		el.Println(err)
-	}
-
-	b, err := strconv.ParseInt(saddr[6:8], 16, 32)
-	if err != nil {
-		el.Println(err)
-	}
-
-	return a*256 + b
-}
-
 func parseAddr(saddr string) (addr string) {
 	family := parseFamily(saddr)
 
 	switch family {
-	case 2:
+	case AF_INET:
 		b, err := hex.DecodeString(saddr[8:16])
 		if err != nil {
 			el.Printf("unable to decode hex to bytes: %s", err)
