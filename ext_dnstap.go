@@ -31,29 +31,7 @@ func NewDnsTapClient(config *viper.Viper, am *DnsAuditMarshaller) (*DnsTapClient
 
 	socketOwner := config.GetString("dnstap.socket_owner")
 
-	u, err := user.Lookup(socketOwner)
-	if err != nil {
-		return nil, fmt.Errorf("Could not find uid for user %s. Error: %s", socketOwner, err)
-	}
-
-	uid, err := strconv.ParseInt(u.Uid, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("Found uid could not be parsed. Error: %s", err)
-	}
-
-	g, err := user.LookupGroup(socketOwner)
-	if err != nil {
-		return nil, fmt.Errorf("Could not find gid for group %s. Error: %s", socketOwner, err)
-	}
-
-	gid, err := strconv.ParseInt(g.Gid, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("Found gid could not be parsed. Error: %s", err)
-	}
-
-	if err = os.Chown(socket, int(uid), int(gid)); err != nil {
-		return nil, fmt.Errorf("Could not chown output file. Error: %s", err)
-	}
+	chown(socketOwner, socket)
 
 	d := &DnsTapClient{
 		Listener:           listener,
@@ -61,6 +39,33 @@ func NewDnsTapClient(config *viper.Viper, am *DnsAuditMarshaller) (*DnsTapClient
 	}
 	el.Printf("Started dnstap listener, opened input socket: %s", socket)
 	return d, nil
+}
+
+func chown(socketOwner string, socket string) error {
+	u, err := user.Lookup(socketOwner)
+	if err != nil {
+		return fmt.Errorf("Could not find uid for user %s. Error: %s", socketOwner, err)
+	}
+
+	uid, err := strconv.ParseInt(u.Uid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("Found uid could not be parsed. Error: %s", err)
+	}
+
+	g, err := user.LookupGroup(socketOwner)
+	if err != nil {
+		return fmt.Errorf("Could not find gid for group %s. Error: %s", socketOwner, err)
+	}
+
+	gid, err := strconv.ParseInt(g.Gid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("Found gid could not be parsed. Error: %s", err)
+	}
+
+	if err = os.Chown(socket, int(uid), int(gid)); err != nil {
+		return fmt.Errorf("Could not chown output file. Error: %s", err)
+	}
+	return nil
 }
 
 func (d *DnsTapClient) Receive() {
@@ -109,26 +114,26 @@ func (d *DnsTapClient) cache(dt *dnstap.Dnstap) {
 	} else {
 		for i, r := range m.Answer {
 			host := strings.TrimRight(r.Header().Name, ".")
+			var record string
 			switch m.Answer[i].Header().Rrtype {
 			case dns.TypeA:
-				ipv4 := m.Answer[i].(*dns.A).A.String()
-				d.DnsAuditMarshaller.cache.Set(ipv4, []byte(host))
-				if seq, ok := d.DnsAuditMarshaller.waitingForDNS[ipv4]; ok {
-					if msg, ok := d.DnsAuditMarshaller.msgs[seq]; ok {
-						if !d.DnsAuditMarshaller.GotDNS[seq] && d.DnsAuditMarshaller.GotSaddr[seq] {
-							d.DnsAuditMarshaller.getDNS(msg)
-						}
-						d.DnsAuditMarshaller.completeMessage(seq)
-					}
-					delete(d.DnsAuditMarshaller.waitingForDNS, ipv4)
-				}
+				record = m.Answer[i].(*dns.A).A.String()
+				d.DnsAuditMarshaller.cache.Set(record, []byte(host))
 			case dns.TypeAAAA:
-				ipv6 := m.Answer[i].(*dns.AAAA).AAAA.String()
-				d.DnsAuditMarshaller.cache.Set(ipv6, []byte(host))
+				record = m.Answer[i].(*dns.AAAA).AAAA.String()
+				d.DnsAuditMarshaller.cache.Set(record, []byte(host))
 			case dns.TypeCNAME:
-				cname := m.Answer[i].(*dns.CNAME).Target
-				d.DnsAuditMarshaller.cache.Set(cname, []byte(host))
-				//el.Printf("Setting cname for %s -> %s @ %v", host, cname, time.Now().Unix())
+				record := m.Answer[i].(*dns.CNAME).Target
+				d.DnsAuditMarshaller.cache.Set(record, []byte(host))
+			}
+			if seq, ok := d.DnsAuditMarshaller.waitingForDNS[record]; ok {
+				if msg, ok := d.DnsAuditMarshaller.msgs[seq]; ok {
+					if !d.DnsAuditMarshaller.GotDNS[seq] && d.DnsAuditMarshaller.GotSaddr[seq] {
+						d.DnsAuditMarshaller.getDNS(msg)
+					}
+					d.DnsAuditMarshaller.completeMessage(seq)
+				}
+				delete(d.DnsAuditMarshaller.waitingForDNS, record)
 			}
 
 		}

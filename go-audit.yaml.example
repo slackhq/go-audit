@@ -9,6 +9,7 @@ socket_buffer:
 # Configure dnstap socket path if available 
 dnstap:    
   enabled: true
+  socket_owner: coredns
   socket: /var/run/dnstap.sock
   record_ttl: 300s
   max_cache_size: 10 # in mb
