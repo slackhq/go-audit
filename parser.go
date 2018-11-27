@@ -126,7 +126,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.UidMap[uid]; !ok {
-			amg.UidMap[uid] = getUsername(data[start : start+end])
+			amg.UidMap[uid] = getUsername(uid)
 		}
 
 		// Find the next uid= if we have space for one
