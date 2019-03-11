@@ -84,7 +84,7 @@ func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
 	return time, seq
 }
 
-// Add a new message to the current message group
+// AddMessage adds a new message to the current message group
 func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
