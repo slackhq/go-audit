@@ -1,5 +1,6 @@
 bin:
 	govendor sync
+	gofmt -w ./*.go
 	go build
 
 test:

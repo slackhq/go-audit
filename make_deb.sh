@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -oux pipefail
+
 # depends on `fpm`, install via `gem`
 
 VERSION="0.16.0"
