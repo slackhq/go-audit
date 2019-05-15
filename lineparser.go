@@ -821,7 +821,11 @@ func parseMessage(amg *AuditMessageGroup, humanFriendly bool) map[string]interfa
 
 			for _, fields := range strings.Split(am.Data, " ") {
 				kv := strings.SplitN(fields, "=", 2)
-				msgs[am.Type].(map[string]interface{})[kv[0]] = kv[1]
+				if len(kv) < 2 {
+					msgs[am.Type].(map[string]interface{})[kv[0]] = ""
+				} else {
+					msgs[am.Type].(map[string]interface{})[kv[0]] = kv[1]
+				}
 			}
 
 		}
