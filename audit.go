@@ -46,6 +46,8 @@ func loadConfig(configFile string) (*viper.Viper, error) {
 	config.SetDefault("output.gelf.network", "udp")
 	config.SetDefault("output.gelf.compression.level", int(flate.BestSpeed))
 	config.SetDefault("output.gelf.compression.type", int(gelf.CompressGzip))
+	config.SetDefault("message_decoding.enabled", false)
+	config.SetDefault("message_decoding.human_friendly_messages", false)
 	config.SetDefault("log.flags", 0)
 
 	if err := config.ReadInConfig(); err != nil {
@@ -399,6 +401,8 @@ func main() {
 		config.GetBool("message_tracking.enabled"),
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
+		config.GetBool("message_decoding.enabled"),
+		config.GetBool("message_decoding.human_friendly_messages"),
 		filters,
 	)
 

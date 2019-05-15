@@ -7,23 +7,21 @@ import (
 	"time"
 )
 
-const (
-	EVENT_EOE = 1320 // End of multi packet event
-)
-
 type AuditMarshaller struct {
-	msgs          map[int]*AuditMessageGroup
-	writer        *AuditWriter
-	lastSeq       int
-	missed        map[int]bool
-	worstLag      int
-	eventMin      uint16
-	eventMax      uint16
-	trackMessages bool
-	logOutOfOrder bool
-	maxOutOfOrder int
-	attempts      int
-	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+	msgs           map[int]*AuditMessageGroup
+	writer         *AuditWriter
+	lastSeq        int
+	missed         map[int]bool
+	worstLag       int
+	eventMin       uint16
+	eventMax       uint16
+	trackMessages  bool
+	logOutOfOrder  bool
+	maxOutOfOrder  int
+	attempts       int
+	decodeMessages bool
+	humanFriendly  bool
+	filters        map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
 }
 
 type AuditFilter struct {
@@ -33,17 +31,19 @@ type AuditFilter struct {
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, decodeMessages bool, humanFriendly bool, filters []AuditFilter) *AuditMarshaller {
 	am := AuditMarshaller{
-		writer:        w,
-		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
-		missed:        make(map[int]bool, 10),
-		eventMin:      eventMin,
-		eventMax:      eventMax,
-		trackMessages: trackMessages,
-		logOutOfOrder: logOOO,
-		maxOutOfOrder: maxOOO,
-		filters:       make(map[string]map[uint16][]*regexp.Regexp),
+		writer:         w,
+		msgs:           make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
+		missed:         make(map[int]bool, 10),
+		eventMin:       eventMin,
+		eventMax:       eventMax,
+		trackMessages:  trackMessages,
+		logOutOfOrder:  logOOO,
+		maxOutOfOrder:  maxOOO,
+		decodeMessages: decodeMessages,
+		humanFriendly:  humanFriendly,
+		filters:        make(map[string]map[uint16][]*regexp.Regexp),
 	}
 
 	for _, filter := range filters {
@@ -79,7 +79,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		// Drop all audit messages that aren't things we care about or end a multi packet event
 		a.flushOld()
 		return
-	} else if nlMsg.Header.Type == EVENT_EOE {
+	} else if nlMsg.Header.Type == AUDIT_EOE {
 		// This is end of event msg, flush the msg with that sequence and discard this one
 		a.completeMessage(aMsg.Seq)
 		return
@@ -111,6 +111,7 @@ func (a *AuditMarshaller) flushOld() {
 func (a *AuditMarshaller) completeMessage(seq int) {
 	var msg *AuditMessageGroup
 	var ok bool
+	var err error
 
 	if msg, ok = a.msgs[seq]; !ok {
 		//TODO: attempted to complete a missing message, log?
@@ -122,7 +123,14 @@ func (a *AuditMarshaller) completeMessage(seq int) {
 		return
 	}
 
-	if err := a.writer.Write(msg); err != nil {
+	if a.decodeMessages {
+		parsedMsg := parseMessage(msg, a.humanFriendly)
+		err = a.writer.Write(parsedMsg)
+	} else {
+		err = a.writer.Write(msg)
+	}
+
+	if err != nil {
 		el.Println("Failed to write message. Error:", err)
 		os.Exit(1)
 	}

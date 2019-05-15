@@ -89,9 +89,9 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307, 1306:
+	case AUDIT_EXECVE, AUDIT_CWD, AUDIT_SOCKADDR:
 		// Don't map uids here
-	case 1300:
+	case AUDIT_SYSCALL:
 		amg.findSyscall(am)
 		amg.mapUids(am)
 	default:
