@@ -16,7 +16,7 @@ func TestMarshallerConstants(t *testing.T) {
 
 func TestAuditMarshaller_Consume(t *testing.T) {
 	w := &bytes.Buffer{}
-	m := NewAuditMarshaller(NewAuditWriter(w, 1), uint16(1100), uint16(1399), false, false, 0, []AuditFilter{})
+	m := NewAuditMarshaller(NewAuditWriter(w, 1), uint16(1100), uint16(1399), false, false, 0, []AuditFilter{}, nil)
 
 	// Flush group on 1320
 	m.Consume(&syscall.NetlinkMessage{

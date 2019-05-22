@@ -24,6 +24,7 @@ type AuditMarshaller struct {
 	maxOutOfOrder int
 	attempts      int
 	filters       map[string]map[uint16][]*regexp.Regexp // { syscall: { mtype: [regexp, ...] } }
+	extraParsers  ExtraParsers
 }
 
 type AuditFilter struct {
@@ -33,7 +34,7 @@ type AuditFilter struct {
 }
 
 // Create a new marshaller
-func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter) *AuditMarshaller {
+func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackMessages, logOOO bool, maxOOO int, filters []AuditFilter, extraParsers ExtraParsers) *AuditMarshaller {
 	am := AuditMarshaller{
 		writer:        w,
 		msgs:          make(map[int]*AuditMessageGroup, 5), // It is not typical to have more than 2 message groups at any given time
@@ -44,6 +45,7 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 		logOutOfOrder: logOOO,
 		maxOutOfOrder: maxOOO,
 		filters:       make(map[string]map[uint16][]*regexp.Regexp),
+		extraParsers:  extraParsers,
 	}
 
 	for _, filter := range filters {
@@ -92,6 +94,7 @@ func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
 		// Create a new AuditMessageGroup
 		a.msgs[aMsg.Seq] = NewAuditMessageGroup(aMsg)
 	}
+	a.extraParsers.Parse(aMsg)
 
 	a.flushOld()
 }
