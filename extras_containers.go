@@ -40,7 +40,7 @@ type ContainerParser struct {
 	//	(pid -> containerID)
 	pidCache Cache
 	// map[string]dockertypes.ContainerJSON
-	//	(container_id -> docker_details)
+	//	(containerID -> dockerResponse)
 	dockerCache Cache
 }
 
