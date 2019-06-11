@@ -3,11 +3,6 @@ language: go
 go:
   - 1.x
 
-install:
-  - go get github.com/kardianos/govendor
-  - go get github.com/stretchr/testify/assert
-  - govendor sync
-
 script:
   - go test -coverprofile=coverage.txt -covermode=atomic
 
