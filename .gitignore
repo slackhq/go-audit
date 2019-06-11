@@ -6,5 +6,3 @@ go-audit.yaml
 *.deb
 *.out
 node_modules
-vendor/**
-!vendor/vendor.json
