@@ -4,7 +4,7 @@ go:
   - 1.x
 
 script:
-  - env GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic
+  - env GO111MODULE=on go test -mod=readonly -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
