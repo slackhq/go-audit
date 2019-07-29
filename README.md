@@ -129,3 +129,4 @@ sudo systemctl mask systemd-journald-audit.socket
 ## Thanks!
 
 To Hardik Juneja, Arun Sori, Aalekh Nigam Aalekhn for the inspiration via https://github.com/mozilla/audit-go
+
