@@ -129,3 +129,24 @@ filters:
   - syscall: 49 # The syscall id of the message group (a single log line from go-audit), to test against the regex
     message_type: 1306 # The message type identifier containing the data to test against the regex
     regex: saddr=(10..|0A..) # The regex to test against the message specific message types data
+
+extras:
+  # Fetch extra fields for containers:
+  # - containers.id
+  # - containers.image (requires docker)
+  # - containers.name (from kubernetes, if docker enabled)
+  # - containers.pod_uid (from kubernetes, if docker enabled)
+  # - containers.pod_name (from kubernetes, if available)
+  # - containers.pod_namespace (from kubernetes, if available)
+  #
+  # The values listed below are the defaults, you can specify only the ones
+  # you need to change
+  containers:
+    enabled: false
+    # if enabled, make requests to the local docker daemon for extra container details
+    docker: false
+    docker_api_version: 1.24
+    # number of pid -> container_id mappings to cache (0 means disable cache)
+    pid_cache: 0
+    # number of container_id -> docker_details to cache (0 means disable cache)
+    docker_cache: 0

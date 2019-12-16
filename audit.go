@@ -400,6 +400,7 @@ func main() {
 		config.GetBool("message_tracking.log_out_of_order"),
 		config.GetInt("message_tracking.max_out_of_order"),
 		filters,
+		createExtraParsers(config),
 	)
 
 	l.Printf("Started processing events in the range [%d, %d]\n", config.GetInt("events.min"), config.GetInt("events.max"))
