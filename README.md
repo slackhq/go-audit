@@ -15,7 +15,7 @@ I became interested in creating a replacement for the existing daemon.
 * Safe : Written in a modern language that is type safe and performant
 * Fast : Never ever ever ever block if we can avoid it
 * Outputs json : Yay
-* Pluggable pipelines : Can write to syslog, local file, or stdout. Additional outputs are easily written. 
+* Pluggable pipelines : Can write to syslog, local file, Graylog2 or stdout. Additional outputs are easily written. 
 * Connects to the linux kernel via netlink (info [here](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/tree/kernel/audit.c?id=refs/tags/v3.14.56) and [here](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/audit.h?h=linux-3.14.y))
 
 ## Usage

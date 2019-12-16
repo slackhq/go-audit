@@ -1,9 +1,10 @@
+GO111MODULE = on
+export GO111MODULE
+
 bin:
-	govendor sync
 	go build
 
 test:
-	govendor sync
 	go test -v
 
 test-cov-html:
