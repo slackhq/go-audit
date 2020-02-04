@@ -21,7 +21,9 @@ func createExtraParsers(config *viper.Viper) ExtraParsers {
 		if err != nil {
 			el.Fatalf("Failed to create ExtraParser: %v", err)
 		}
-		extraParsers = append(extraParsers, cp)
+		if cp != nil {
+			extraParsers = append(extraParsers, cp)
+		}
 	}
 	return extraParsers
 }
