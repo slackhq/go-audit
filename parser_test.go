@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
-	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuditConstants(t *testing.T) {
@@ -15,8 +15,8 @@ func TestAuditConstants(t *testing.T) {
 }
 
 func TestNewAuditMessage(t *testing.T) {
-	msg := &syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	msg := &NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1309),
 			Flags: uint16(0),

@@ -5,7 +5,6 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -54,7 +53,7 @@ func NewAuditMessageGroup(am *AuditMessage) *AuditMessageGroup {
 }
 
 // Creates a new go-audit message from a netlink message
-func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
+func NewAuditMessage(nlm *NetlinkMessage) *AuditMessage {
 	aTime, seq := parseAuditHeader(nlm)
 	return &AuditMessage{
 		Type:      nlm.Header.Type,
@@ -65,7 +64,7 @@ func NewAuditMessage(nlm *syscall.NetlinkMessage) *AuditMessage {
 }
 
 // Gets the timestamp and audit sequence id from a netlink message
-func parseAuditHeader(msg *syscall.NetlinkMessage) (time string, seq int) {
+func parseAuditHeader(msg *NetlinkMessage) (time string, seq int) {
 	headerStop := bytes.Index(msg.Data, headerEndChar)
 	// If the position the header appears to stop is less than the minimum length of a header, bail out
 	if headerStop < HEADER_MIN_LENGTH {

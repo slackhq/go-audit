@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"regexp"
-	"syscall"
 	"time"
 )
 
@@ -64,7 +63,7 @@ func NewAuditMarshaller(w *AuditWriter, eventMin uint16, eventMax uint16, trackM
 }
 
 // Ingests a netlink message and likely prepares it to be logged
-func (a *AuditMarshaller) Consume(nlMsg *syscall.NetlinkMessage) {
+func (a *AuditMarshaller) Consume(nlMsg *NetlinkMessage) {
 	aMsg := NewAuditMessage(nlMsg)
 
 	if aMsg.Seq == 0 {
