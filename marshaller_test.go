@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"syscall"
 	"testing"
 	"time"
 
@@ -19,8 +18,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 	m := NewAuditMarshaller(NewAuditWriter(w, 1), uint16(1100), uint16(1399), false, false, 0, []AuditFilter{}, nil)
 
 	// Flush group on 1320
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1300),
 			Flags: uint16(0),
@@ -30,8 +29,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 		Data: []byte("audit(10000001:1): hi there"),
 	})
 
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1301),
 			Flags: uint16(0),
@@ -52,8 +51,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 
 	// Ignore below 1100
 	w.Reset()
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1099),
 			Flags: uint16(0),
@@ -67,8 +66,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 
 	// Ignore above 1399
 	w.Reset()
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1400),
 			Flags: uint16(0),
@@ -82,8 +81,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 
 	// Ignore sequences of 0
 	w.Reset()
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1400),
 			Flags: uint16(0),
@@ -97,8 +96,8 @@ func TestAuditMarshaller_Consume(t *testing.T) {
 
 	// Should flush old msgs after 2 seconds
 	w.Reset()
-	m.Consume(&syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+	m.Consume(&NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1300),
 			Flags: uint16(0),
@@ -126,8 +125,8 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	// lb, elb := hookLogger()
 	// m := NewAuditMarshaller(NewAuditWriter(&FailWriter{}, 1), uint16(1300), uint16(1399), false, false, 0, []AuditFilter{})
 
-	// m.Consume(&syscall.NetlinkMessage{
-	// 	Header: syscall.NlMsghdr{
+	// m.Consume(&NetlinkMessage{
+	// 	Header: NetlinkPacket{
 	// 		Len:   uint32(44),
 	// 		Type:  uint16(1300),
 	// 		Flags: uint16(0),
@@ -142,9 +141,9 @@ func TestAuditMarshaller_completeMessage(t *testing.T) {
 	// assert.Equal(t, "!", elb.String())
 }
 
-func new1320(seq string) *syscall.NetlinkMessage {
-	return &syscall.NetlinkMessage{
-		Header: syscall.NlMsghdr{
+func new1320(seq string) *NetlinkMessage {
+	return &NetlinkMessage{
+		Header: NetlinkPacket{
 			Len:   uint32(44),
 			Type:  uint16(1320),
 			Flags: uint16(0),

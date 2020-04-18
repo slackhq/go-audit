@@ -10,12 +10,12 @@ import (
 	"os/user"
 	"path"
 	"strconv"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sys/unix"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
@@ -413,7 +413,7 @@ func Test_createOutput(t *testing.T) {
 	os.Rename(path.Join(os.TempDir(), "go-audit.test.log"), path.Join(os.TempDir(), "go-audit.test.log.rotated"))
 	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.True(t, os.IsNotExist(err))
-	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+	unix.Kill(unix.Getpid(), unix.SIGUSR1)
 	time.Sleep(100 * time.Millisecond)
 	_, err = os.Stat(path.Join(os.TempDir(), "go-audit.test.log"))
 	assert.Nil(t, err)
@@ -565,15 +565,15 @@ func Benchmark_MultiPacketMessage(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for n := 0; n < len(data); n++ {
 			nlen := len(data[n])
-			msg := &syscall.NetlinkMessage{
-				Header: syscall.NlMsghdr{
+			msg := &NetlinkMessage{
+				Header: NetlinkPacket{
 					Len:   Endianness.Uint32(data[n][0:4]),
 					Type:  Endianness.Uint16(data[n][4:6]),
 					Flags: Endianness.Uint16(data[n][6:8]),
 					Seq:   Endianness.Uint32(data[n][8:12]),
 					Pid:   Endianness.Uint32(data[n][12:16]),
 				},
-				Data: data[n][syscall.SizeofNlMsghdr:nlen],
+				Data: data[n][unix.SizeofNlMsghdr:nlen],
 			}
 			marshaller.Consume(msg)
 		}

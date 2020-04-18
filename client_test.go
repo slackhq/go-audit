@@ -3,15 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/stretchr/testify/assert"
 	"os"
-	"syscall"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sys/unix"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
 	n := makeNelinkClient(t)
-	defer syscall.Close(n.fd)
+	defer unix.Close(n.fd)
 
 	n.KeepConnection()
 	msg, err := n.Receive()
@@ -31,7 +32,7 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 	// Make sure we get errors printed
 	lb, elb := hookLogger()
 	defer resetLogger()
-	syscall.Close(n.fd)
+	unix.Close(n.fd)
 	n.KeepConnection()
 	assert.Equal(t, "", lb.String(), "Got some log lines we did not expect")
 	assert.Equal(t, "Error occurred while trying to keep the connection: bad file descriptor\n", elb.String(), "Figured we would have an error")
@@ -39,11 +40,11 @@ func TestNetlinkClient_KeepConnection(t *testing.T) {
 
 func TestNetlinkClient_SendReceive(t *testing.T) {
 	var err error
-	var msg *syscall.NetlinkMessage
+	var msg *NetlinkMessage
 
 	// Build our client
 	n := makeNelinkClient(t)
-	defer syscall.Close(n.fd)
+	defer unix.Close(n.fd)
 
 	// Make sure we can encode/decode properly
 	payload := &AuditStatusPayload{
@@ -54,7 +55,7 @@ func TestNetlinkClient_SendReceive(t *testing.T) {
 
 	packet := &NetlinkPacket{
 		Type:  uint16(1001),
-		Flags: syscall.NLM_F_REQUEST | syscall.NLM_F_ACK,
+		Flags: unix.NLM_F_REQUEST | unix.NLM_F_ACK,
 		Pid:   uint32(1006),
 	}
 
@@ -72,12 +73,12 @@ func TestNetlinkClient_SendReceive(t *testing.T) {
 	assert.Equal(t, uint32(2), msg.Header.Seq, "Header.Seq did not increment")
 
 	// Make sure 0 length packets result in an error
-	syscall.Sendto(n.fd, []byte{}, 0, n.address)
+	unix.Sendto(n.fd, []byte{}, 0, n.address)
 	_, err = n.Receive()
 	assert.Equal(t, "Got a 0 length packet", err.Error(), "Error was incorrect")
 
 	// Make sure we get errors from sendto back
-	syscall.Close(n.fd)
+	unix.Close(n.fd)
 	err = n.Send(packet, payload)
 	assert.Equal(t, "bad file descriptor", err.Error(), "Error was incorrect")
 
@@ -110,19 +111,19 @@ func TestNewNetlinkClient(t *testing.T) {
 // Helper to make a client listening on a unix socket
 func makeNelinkClient(t *testing.T) *NetlinkClient {
 	os.Remove("go-audit.test.sock")
-	fd, err := syscall.Socket(syscall.AF_UNIX, syscall.SOCK_RAW, 0)
+	fd, err := unix.Socket(unix.AF_UNIX, unix.SOCK_RAW, 0)
 	if err != nil {
 		t.Fatal("Could not create a socket:", err)
 	}
 
 	n := &NetlinkClient{
 		fd:      fd,
-		address: &syscall.SockaddrUnix{Name: "go-audit.test.sock"},
+		address: &unix.SockaddrUnix{Name: "go-audit.test.sock"},
 		buf:     make([]byte, MAX_AUDIT_MESSAGE_LENGTH),
 	}
 
-	if err = syscall.Bind(fd, n.address); err != nil {
-		syscall.Close(fd)
+	if err = unix.Bind(fd, n.address); err != nil {
+		unix.Close(fd)
 		t.Fatal("Could not bind to netlink socket:", err)
 	}
 
@@ -130,7 +131,7 @@ func makeNelinkClient(t *testing.T) *NetlinkClient {
 }
 
 // Helper to send and then receive a message with the netlink client
-func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload *AuditStatusPayload) *syscall.NetlinkMessage {
+func sendReceive(t *testing.T, n *NetlinkClient, packet *NetlinkPacket, payload *AuditStatusPayload) *NetlinkMessage {
 	err := n.Send(packet, payload)
 	if err != nil {
 		t.Fatal("Failed to send:", err)

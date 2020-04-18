@@ -14,9 +14,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
@@ -249,7 +249,7 @@ func handleLogRotation(config *viper.Viper, writer *AuditWriter) {
 	// Re-open our log file. This is triggered by a USR1 signal and is meant to be used upon log rotation
 
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGUSR1)
+	signal.Notify(sigc, unix.SIGUSR1)
 
 	for range sigc {
 		newWriter, err := createFileOutput(config)
