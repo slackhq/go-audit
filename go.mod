@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/go-winio v0.4.14 // indirect
-	github.com/capsule8/capsule8 v0.15.0-alpha.0.20190222164320-1c36ab150bc3
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20190522125255-080524218ed4
 	github.com/docker/go-connections v0.4.0 // indirect
