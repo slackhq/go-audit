@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2020-06-18
+
 ### Added
 
 - You can now run `go-audit -version` to check the build version.
 
-[Unreleased]: https://github.com/slackhq/go-audit/compare/75218d0...HEAD
+[Unreleased]: https://github.com/slackhq/go-audit/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/slackhq/go-audit/releases/tag/v1.0.0
