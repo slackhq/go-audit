@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/capsule8/capsule8/pkg/sys/proc"
-	"github.com/capsule8/capsule8/pkg/sys/proc/procfs"
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/golang/groupcache/lru"
@@ -33,7 +31,6 @@ func init() {
 }
 
 type ContainerParser struct {
-	procfs proc.FileSystem
 	docker *dockerclient.Client
 
 	// map[int]string
@@ -71,10 +68,6 @@ func cacheSize(c Cache) int {
 }
 
 func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
-	procfs, err := procfs.NewFileSystem("")
-	if err != nil {
-		return nil, err
-	}
 	var docker *dockerclient.Client
 	if config.GetBool("docker") {
 		version := config.GetString("docker_api_version")
@@ -84,6 +77,7 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 			// https://docs.docker.com/develop/sdk/#api-version-matrix
 			version = "1.24"
 		}
+		var err error
 		docker, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithVersion(version))
 		if err != nil {
 			return nil, err
@@ -91,7 +85,6 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 	}
 
 	return &ContainerParser{
-		procfs:      procfs,
 		docker:      docker,
 		pidCache:    NewCache(config.GetInt("pid_cache")),
 		dockerCache: NewCache(config.GetInt("docker_cache")),
@@ -186,7 +179,7 @@ func (c ContainerParser) getPidContainerID(pid int) (string, error) {
 	if v, found := c.pidCache.Get(pid); found {
 		return v.(string), nil
 	}
-	cid, err := c.procfs.ProcessContainerID(pid)
+	cid, err := processContainerID(pid)
 	if err == nil {
 		c.pidCache.Add(pid, cid)
 	}
