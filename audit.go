@@ -20,6 +20,13 @@ import (
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 )
 
+// A version string that can be set with
+//
+//     -ldflags "-X main.Build=SOMEVERSION"
+//
+// at compile-time.
+var Build string
+
 var l = log.New(os.Stdout, "", 0)
 var el = log.New(os.Stderr, "", 0)
 
@@ -358,8 +365,14 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 
 func main() {
 	configFile := flag.String("config", "", "Config file location")
+	printVersion := flag.Bool("version", false, "Print version")
 
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Printf("Version: %s\n", Build)
+		os.Exit(0)
+	}
 
 	if *configFile == "" {
 		el.Println("A config file must be provided")

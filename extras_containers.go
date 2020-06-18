@@ -1,3 +1,4 @@
+// +build amd64
 // +build !nocontainers
 
 package main

@@ -1,0 +1,72 @@
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]*'
+
+name: Create release and upload binaries
+
+jobs:
+  build-linux:
+    name: Create and Upload Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.14
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.14
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: |
+          make BUILD_NUMBER="${GITHUB_REF#refs/tags/v}" release
+
+      - name: Create sha256sum
+        run: |
+          for dir in build
+          do
+            (
+              cd $dir
+              for v in *.tar.gz
+              do
+                sha256sum $v
+                tar zxf $v --to-command='sh -c "sha256sum | sed s=-$='$v'/$TAR_FILENAME="'
+              done
+            )
+          done | sort -k 2 >SHASUM256.txt
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      ##
+      ## Upload assets (I wish we could just upload the whole folder at once...
+      ##
+
+      - name: Upload SHASUM256.txt
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SHASUM256.txt
+          asset_name: SHASUM256.txt
+          asset_content_type: text/plain
+
+      - name: Upload linux-amd64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/go-audit-linux-amd64.tar.gz
+          asset_name: go-audit-linux-amd64.tar.gz
+          asset_content_type: application/gzip
