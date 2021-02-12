@@ -22,7 +22,7 @@ I became interested in creating a replacement for the existing daemon.
 
 ##### Installation
 
-1. Install [golang](https://golang.org/doc/install), version 1.7 or greater is required
+1. Install [golang](https://golang.org/doc/install), version 1.14 or greater is required
 2. Clone the repo
 
     ```
