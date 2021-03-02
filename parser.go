@@ -27,6 +27,7 @@ type AuditMessage struct {
 	AuditTime string `json:"-"`
 
 	Containers map[string]string `json:"containers,omitempty"`
+	CgroupRoot string            `json:"cgroup_root,omitempty"`
 }
 
 type AuditMessageGroup struct {
