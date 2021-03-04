@@ -7,6 +7,7 @@ import (
 func init() {
 	RegisterExtraParser(func(config *viper.Viper) (ExtraParser, error) {
 		if config.GetBool("extras.cgroups.enabled") {
+			l.Printf("cgroup parser enabled")
 			return &CgroupParser{}, nil
 		}
 		return nil, nil
@@ -20,7 +21,7 @@ func (p *CgroupParser) Parse(am *AuditMessage) {
 	switch am.Type {
 	case 1300, 1326: // AUDIT_SYSCALL, AUDIT_SECCOMP
 		pid, _ := getPid(am.Data)
-		am.CgroupRoot = p.getCgroupRootForPid(pid)
+		am.Extras.CgroupRoot = p.getCgroupRootForPid(pid)
 	}
 }
 
