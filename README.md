@@ -20,11 +20,7 @@ I became interested in creating a replacement for the existing daemon.
 
 ##### Installation
 
-1. Install [golang](https://golang.org/doc/install), version 1.7 or greater is required
-2. Install [`govendor`](https://github.com/kardianos/govendor) if you haven't already
-
-    ```go get -u github.com/kardianos/govendor```
-    
+1. Install [golang](https://golang.org/doc/install), version 1.14 or greater is required
 2. Clone the repo
 
     ```
@@ -32,13 +28,13 @@ I became interested in creating a replacement for the existing daemon.
     cd go-audit
     ```
     
-2. Build the binary
+3. Build the binary
 
     ```
     make
     ```
 
-3. Copy the binary `go-audit` to wherever you'd like
+4. Copy the binary `go-audit` to wherever you'd like
 
 ##### Testing
 
