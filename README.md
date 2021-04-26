@@ -1,8 +1,6 @@
 # go-audit
 
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/travis/slackhq/go-audit.svg?style=flat-square)](https://travis-ci.org/slackhq/go-audit)
-[![codecov](https://codecov.io/gh/slackhq/go-audit/branch/master/graph/badge.svg)](https://codecov.io/gh/slackhq/go-audit)
 
 ## About
 
