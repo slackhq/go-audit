@@ -33,6 +33,62 @@ rules:
   - -a always,exit -F arch=b64 -S open -S openat -F exit=-EACCES -k access
   - -a always,exit -F arch=b32 -S open -S openat -F exit=-EPERM -k access
   - -a always,exit -F arch=b64 -S open -S openat -F exit=-EPERM -k access
+  ## Watch for configuration changes to privilege escalation.
+  - -a always,exit -F path=/etc/sudoers -F perm=wa -F key=10.2.2-priv-config-changes
+  - -a always,exit -F dir=/etc/sudoers.d/ -F perm=wa -F key=10.2.2-priv-config-changes
+  ## 10.2.3 Access to all audit trails.
+  - -a always,exit -F dir=/var/log/audit/ -F perm=r -F auid>=1000 -F auid!=unset -F key=10.2.3-access-audit-trail
+  - -a always,exit -F path=/usr/sbin/ausearch -F perm=x -F key=10.2.3-access-audit-trail
+  - -a always,exit -F path=/usr/sbin/aureport -F perm=x -F key=10.2.3-access-audit-trail
+  - -a always,exit -F path=/usr/sbin/aulast -F perm=x -F key=10.2.3-access-audit-trail
+  - -a always,exit -F path=/usr/sbin/aulastlogin -F perm=x -F key=10.2.3-access-audit-trail
+  - -a always,exit -F path=/usr/sbin/auvirt -F perm=x -F key=10.2.3-access-audit-trail
+  ## 10.2.5.b All elevation of privileges is logged
+  - -a always,exit -F arch=b64 -S setuid -F a0=0 -F exe=/usr/bin/su -F key=10.2.5.b-elevated-privs-session
+  - -a always,exit -F arch=b32 -S setuid -F a0=0 -F exe=/usr/bin/su -F key=10.2.5.b-elevated-privs-session
+  - -a always,exit -F arch=b64 -S setresuid -F a0=0 -F exe=/usr/bin/sudo -F key=10.2.5.b-elevated-privs-session
+  - -a always,exit -F arch=b32 -S setresuid -F a0=0 -F exe=/usr/bin/sudo -F key=10.2.5.b-elevated-privs-session
+  - -a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -F key=10.2.5.b-elevated-privs-setuid
+  - -a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -F key=10.2.5.b-elevated-privs-setuid
+  ## 10.2.5.c All changes, additions, or deletions to any account are logged
+  ## This is implicitly covered by shadow-utils. We will place some rules
+  ## in case someone tries to hand edit the trusted databases
+  - -a always,exit -F path=/etc/group -F perm=wa -F key=10.2.5.c-accounts
+  - -a always,exit -F path=/etc/passwd -F perm=wa -F key=10.2.5.c-accounts
+  - -a always,exit -F path=/etc/gshadow -F perm=wa -F key=10.2.5.c-accounts
+  - -a always,exit -F path=/etc/shadow -F perm=wa -F key=10.2.5.c-accounts
+  - -a always,exit -F path=/etc/security/opasswd -F perm=wa -F key=10.2.5.c-accounts
+  ## 10.2.6 Verify the following are logged:
+  ## Initialization of audit logs
+  ## Stopping or pausing of audit logs.
+  ## These are handled implicitly by auditd
+  ## 10.2.7 Creation and deletion of system-level objects
+  - -a always,exit -S all -F dir=/boot -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/bin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/sbin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/bin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/local/bin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/local/sbin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/sbin -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/lib -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/lib64 -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/lib -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/etc -F perm=aw -F key=10.2.7-system-objects
+  - -a always,exit -S all -F dir=/usr/lib/systemd/ -F perm=aw -F key=10.2.7-system-objects
+  ## 10.3 Record at least the following audit trail entries
+  ## 10.3.1 through 10.3.6 are implicitly met by the audit system.
+  ## 10.4.2b Time data is protected.
+  ## We will place rules to check time synchronization
+  - -a always,exit -F arch=b32 -S adjtimex,settimeofday,stime -F key=10.4.2b-time-change
+  - -a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=10.4.2b-time-change
+  - -a always,exit -F arch=b32 -S clock_settime -F a0=0x0 -F key=10.4.2b-time-change
+  - -a always,exit -F arch=b64 -S clock_settime -F a0=0x0 -F key=10.4.2b-time-change
+  # Introduced in 2.6.39, commented out because it can make false positives
+  - -w /etc/localtime -p wa -k 10.4.2b-time-change
+
+  ## 10.5.5 Use file-integrity monitoring or change-detection software on logs
+  - -a always,exit -F dir=/var/log/audit/ -F perm=wa -F key=10.5.5-modification-audit
+
 
 filters:
   # reduce the number of connect syscall events being logged
