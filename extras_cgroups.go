@@ -19,9 +19,12 @@ type CgroupParser struct {
 
 func (p *CgroupParser) Parse(am *AuditMessage) {
 	switch am.Type {
-	case 1300, 1326: // AUDIT_SYSCALL, AUDIT_SECCOMP
+	case 1300, 1302, 1309, 1326: // AUDIT_SYSCALL, AUDIT_PATH, AUDIT_EXECVE, AUDIT_SECCOMP
 		pid, _ := getPid(am.Data)
-		am.Extras.CgroupRoot = p.getCgroupRootForPid(pid)
+		cgroup := p.getCgroupRootForPid(pid)
+		if cgroup != "" {
+			am.Extras = &AuditExtras{CgroupRoot: cgroup}
+		}
 	}
 }
 
