@@ -1,3 +1,4 @@
+//go:build !nocontainers
 // +build !nocontainers
 
 // NOTE: This code was originally sourced from:
