@@ -28,6 +28,11 @@ type AuditMessage struct {
 
 	Containers map[string]string `json:"containers,omitempty"`
 	Metadata   map[string]string `json:"metadata,omitempty"`
+	Extras     *AuditExtras      `json:"extras,omitempty"`
+}
+
+type AuditExtras struct {
+	CgroupRoot string `json:"cgroup_root,omitempty"`
 }
 
 type AuditMessageGroup struct {
