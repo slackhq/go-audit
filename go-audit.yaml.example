@@ -153,7 +153,7 @@ extras:
 
   # Add arbitrary key/value pairs to all messages. This capability could be
   # used to pass additional context about the running environment.
-  metadata:
+  labels:
     enabled: false
     pairs:
       environment: prod

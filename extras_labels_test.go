@@ -7,17 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMetadataParser(t *testing.T) {
+func TestLabelsParser(t *testing.T) {
 	pairs := map[string]string{"hello": "world"}
 
 	c := viper.New()
-	c.Set("extras.metadata.enabled", true)
-	c.Set("extras.metadata.pairs", pairs)
+	c.Set("extras.labels.enabled", true)
+	c.Set("extras.labels.pairs", pairs)
 
 	am := &AuditMessage{}
 
-	mp := NewMetadataParser(c)
+	mp := NewLabelsParser(c)
 	mp.Parse(am)
 
-	assert.Equal(t, am.Metadata, pairs)
+	assert.Equal(t, am.Labels, pairs)
 }
