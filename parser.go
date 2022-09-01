@@ -27,6 +27,7 @@ type AuditMessage struct {
 	AuditTime string `json:"-"`
 
 	Containers map[string]string `json:"containers,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
 	Extras     *AuditExtras      `json:"extras,omitempty"`
 }
 

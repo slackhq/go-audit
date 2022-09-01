@@ -150,3 +150,11 @@ extras:
     pid_cache: 0
     # number of container_id -> docker_details to cache (0 means disable cache)
     docker_cache: 0
+
+  # Add arbitrary key/value pairs to all messages. This capability could be
+  # used to pass additional context about the running environment.
+  labels:
+    enabled: false
+    pairs:
+      environment: prod
+      region: us-east-2
