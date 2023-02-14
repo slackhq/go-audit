@@ -10,7 +10,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/fsnotify/fsnotify v0.0.0-20160816051541-f12c6236fe7b // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9
 	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/hashicorp/hcl v0.0.0-20160902165219-99df0eb941dd // indirect
@@ -31,7 +31,6 @@ require (
 	github.com/spf13/pflag v0.0.0-20160911194638-7b17cc4658ef // indirect
 	github.com/spf13/viper v0.0.0-20170217163817-7538d73b4eb9
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/grpc v1.25.1 // indirect
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20180326133423-4dbb9d721348
