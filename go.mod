@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-buffruneio v0.1.0 // indirect
 	github.com/pelletier/go-toml v0.0.0-20160906202557-31055c2ff0bb // indirect
 	github.com/pkg/sftp v0.0.0-20160908100035-8197a2e58073 // indirect
