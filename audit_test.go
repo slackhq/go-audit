@@ -448,7 +448,7 @@ func Test_createFilters(t *testing.T) {
 	// Bad message type - string
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"message_type": "bad message type"})
+	rf = append(rf, map[string]interface{}{"message_type": "bad message type"})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "`message_type` in filter 1 could not be parsed; Value: `bad message type`; Error: strconv.ParseUint: parsing \"bad message type\": invalid syntax")
@@ -457,7 +457,7 @@ func Test_createFilters(t *testing.T) {
 	// Bad message type - unknown
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"message_type": false})
+	rf = append(rf, map[string]interface{}{"message_type": false})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "`message_type` in filter 1 could not be parsed; Value: `false`")
@@ -466,7 +466,7 @@ func Test_createFilters(t *testing.T) {
 	// Bad regex - not string
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"regex": false})
+	rf = append(rf, map[string]interface{}{"regex": false})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "`regex` in filter 1 could not be parsed; Value: `false`")
@@ -475,7 +475,7 @@ func Test_createFilters(t *testing.T) {
 	// Bad regex - un-parse-able
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"regex": "["})
+	rf = append(rf, map[string]interface{}{"regex": "["})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "`regex` in filter 1 could not be parsed; Value: `[`; Error: error parsing regexp: missing closing ]: `[`")
@@ -484,7 +484,7 @@ func Test_createFilters(t *testing.T) {
 	// Bad syscall - not string or int
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"syscall": []string{}})
+	rf = append(rf, map[string]interface{}{"syscall": []string{}})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "`syscall` in filter 1 could not be parsed; Value: `[]`")
@@ -493,7 +493,7 @@ func Test_createFilters(t *testing.T) {
 	// Missing regex
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"syscall": "1", "message_type": "1"})
+	rf = append(rf, map[string]interface{}{"syscall": "1", "message_type": "1"})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "Filter 1 is missing the `regex` entry")
@@ -502,7 +502,7 @@ func Test_createFilters(t *testing.T) {
 	// Missing message_type
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"syscall": "1", "regex": "1"})
+	rf = append(rf, map[string]interface{}{"syscall": "1", "regex": "1"})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.EqualError(t, err, "Filter 1 is missing the `message_type` entry")
@@ -511,7 +511,7 @@ func Test_createFilters(t *testing.T) {
 	// Good with strings
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"message_type": "1", "regex": "1", "syscall": "1"})
+	rf = append(rf, map[string]interface{}{"message_type": "1", "regex": "1", "syscall": "1"})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.Nil(t, err)
@@ -527,7 +527,7 @@ func Test_createFilters(t *testing.T) {
 	elb.Reset()
 	c = viper.New()
 	rf = make([]interface{}, 0)
-	rf = append(rf, map[interface{}]interface{}{"message_type": 1, "regex": "1", "syscall": 1})
+	rf = append(rf, map[string]interface{}{"message_type": 1, "regex": "1", "syscall": 1})
 	c.Set("filters", rf)
 	f, err = createFilters(c)
 	assert.Nil(t, err)

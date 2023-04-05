@@ -304,7 +304,7 @@ func createFilters(config *viper.Viper) ([]AuditFilter, error) {
 	}
 
 	for i, f := range ft {
-		f2, ok := f.(map[interface{}]interface{})
+		f2, ok := f.(map[string]interface{})
 		if !ok {
 			return filters, fmt.Errorf("Could not parse filter %d; '%+v'", i+1, f)
 		}
