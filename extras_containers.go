@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/containers"
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/golang/groupcache/lru"
@@ -17,10 +19,12 @@ func init() {
 		if config.GetBool("extras.containers.enabled") {
 			cp, err := NewContainerParser(config.Sub("extras.containers"))
 			if err == nil {
-				l.Printf("ContainerParser enabled (docker=%v pid_cache=%d docker_cache=%d)\n",
+				l.Printf("ContainerParser enabled (docker=%v containerd=%v pid_cache=%d docker_cache=%d containerd_cache=%d)\n",
 					cp.docker != nil,
+					cp.containerd != nil,
 					cacheSize(cp.pidCache),
 					cacheSize(cp.dockerCache),
+					cacheSize(cp.containerdCache),
 				)
 			}
 			return cp, err
@@ -30,7 +34,8 @@ func init() {
 }
 
 type ContainerParser struct {
-	docker *dockerclient.Client
+	docker     *dockerclient.Client
+	containerd *containerd.Client
 
 	// map[int]string
 	//	(pid -> containerID)
@@ -38,6 +43,9 @@ type ContainerParser struct {
 	// map[string]dockertypes.ContainerJSON
 	//	(containerID -> dockerResponse)
 	dockerCache Cache
+	// map[string]*containers.Container
+	//	(containerID -> containerdResponse)
+	containerdCache Cache
 }
 
 type Cache interface {
@@ -83,10 +91,25 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 		}
 	}
 
+	var containerdClient *containerd.Client
+	if config.GetBool("containerd") {
+		sockAddr := config.GetString("containerd_sock")
+		if sockAddr == "" {
+			sockAddr = "/run/containerd/containerd.sock"
+		}
+		var err error
+		containerdClient, err = containerd.New(sockAddr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &ContainerParser{
-		docker:      docker,
-		pidCache:    NewCache(config.GetInt("pid_cache")),
-		dockerCache: NewCache(config.GetInt("docker_cache")),
+		docker:          docker,
+		containerd:      containerdClient,
+		pidCache:        NewCache(config.GetInt("pid_cache")),
+		dockerCache:     NewCache(config.GetInt("docker_cache")),
+		containerdCache: NewCache(config.GetInt("containerd_cache")),
 	}, nil
 }
 
@@ -129,6 +152,30 @@ func (c ContainerParser) getContainersForPid(pid, ppid int) map[string]string {
 		}
 	}
 
+	if c.containerd != nil {
+		container, err := c.getContainerdContainer(cid)
+
+		if err != nil {
+			el.Printf("failed to query containerd for container id: %s: %v\n", cid, err)
+		} else {
+			if container.Labels != nil {
+				return map[string]string{
+					"id":            cid,
+					"image":         container.Image,
+					"name":          container.Labels["io.kubernetes.container.name"],
+					"pod_uid":       container.Labels["io.kubernetes.pod.uid"],
+					"pod_name":      container.Labels["io.kubernetes.pod.name"],
+					"pod_namespace": container.Labels["io.kubernetes.pod.namespace"],
+				}
+			} else {
+				return map[string]string{
+					"id":    cid,
+					"image": container.Image,
+				}
+			}
+		}
+	}
+
 	return map[string]string{
 		"id": cid,
 	}
@@ -155,4 +202,24 @@ func (c ContainerParser) getDockerContainer(containerID string) (dockertypes.Con
 		c.dockerCache.Add(containerID, container)
 	}
 	return container, err
+}
+
+func (c ContainerParser) getContainerdContainer(containerID string) (*containers.Container, error) {
+	if v, found := c.containerdCache.Get(containerID); found {
+		return v.(*containers.Container), nil
+	}
+
+	container, err := c.containerd.LoadContainer(context.TODO(), containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := container.Info(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	c.containerdCache.Add(containerID, &info)
+
+	return &info, nil
 }
