@@ -3,6 +3,7 @@ module github.com/slackhq/go-audit
 go 1.20
 
 require (
+	github.com/containerd/containerd v1.7.0
 	github.com/docker/docker v23.0.3+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/spf13/viper v1.15.0
@@ -16,7 +17,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/Microsoft/hcsshim v0.10.0-rc.7 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
-	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.1 // indirect
