@@ -93,12 +93,17 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 
 	var containerdClient *containerd.Client
 	if config.GetBool("containerd") {
+		var opts []containerd.ClientOpt
 		sockAddr := config.GetString("containerd_sock")
 		if sockAddr == "" {
 			sockAddr = "/run/containerd/containerd.sock"
 		}
+		namespace := config.GetString("containerd_namespace")
+		if namespace != "" {
+			opts = append(opts, containerd.WithDefaultNamespace(namespace))
+		}
 		var err error
-		containerdClient, err = containerd.New(sockAddr)
+		containerdClient, err = containerd.New(sockAddr, opts...)
 		if err != nil {
 			return nil, err
 		}

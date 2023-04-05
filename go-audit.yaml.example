@@ -147,6 +147,7 @@ extras:
     # if enabled, make requests to the local containerd daemon for extra container details
     containerd: false
     containerd_sock: /run/containerd/containerd.sock
+    containerd_namespace: k8s.io
 
     # if enabled, make requests to the local docker daemon for extra container details
     docker: false
