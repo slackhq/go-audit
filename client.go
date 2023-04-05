@@ -18,7 +18,7 @@ const (
 	MAX_AUDIT_MESSAGE_LENGTH = 8970
 )
 
-//TODO: this should live in a marshaller
+// TODO: this should live in a marshaller
 type AuditStatusPayload struct {
 	Mask            uint32
 	Enabled         uint32
