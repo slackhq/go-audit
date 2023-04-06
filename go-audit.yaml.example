@@ -143,10 +143,19 @@ extras:
   # you need to change
   containers:
     enabled: false
+
+    # if enabled, make requests to the local containerd daemon for extra container details
+    containerd: false
+    containerd_sock: /run/containerd/containerd.sock
+    containerd_namespace: k8s.io
+
     # if enabled, make requests to the local docker daemon for extra container details
     docker: false
     docker_api_version: 1.24
+
     # number of pid -> container_id mappings to cache (0 means disable cache)
     pid_cache: 0
     # number of container_id -> docker_details to cache (0 means disable cache)
     docker_cache: 0
+    # number of container_id -> containerd_details to cache (0 means disable cache)
+    containerd_cache: 0

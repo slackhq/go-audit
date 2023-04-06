@@ -163,6 +163,7 @@ func containerID(s string) string {
 				return x
 			}
 			// Does it end with a sha256?
+			p = strings.TrimSuffix(p, ".scope")
 			x = p[len(p)-sha256HexSize:]
 			if !isHexDigit(rune(p[len(p)-sha256HexSize-1])) && isSHA256(x) {
 				return x
