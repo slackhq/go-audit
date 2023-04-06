@@ -1,5 +1,5 @@
-//go:build amd64 && !nocontainers
-// +build amd64,!nocontainers
+//go:build !nocontainers
+// +build !nocontainers
 
 package main
 
