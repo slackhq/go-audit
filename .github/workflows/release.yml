@@ -70,3 +70,13 @@ jobs:
           asset_path: ./build/go-audit-linux-amd64.tar.gz
           asset_name: go-audit-linux-amd64.tar.gz
           asset_content_type: application/gzip
+
+      - name: Upload linux-arm64
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/go-audit-linux-arm64.tar.gz
+          asset_name: go-audit-linux-arm64.tar.gz
+          asset_content_type: application/gzip

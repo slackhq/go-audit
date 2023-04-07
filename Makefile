@@ -4,7 +4,7 @@ export GO111MODULE
 
 LDFLAGS = -X main.Build=$(BUILD_NUMBER)
 
-ALL = linux-amd64
+ALL = linux-amd64 linux-arm64
 
 bin:
 	go build -ldflags "$(LDFLAGS)"
