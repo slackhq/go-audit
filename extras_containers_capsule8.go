@@ -29,7 +29,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -68,7 +68,7 @@ func processContainerID(pid int) (string, error) {
 // TaskControlGroups returns the cgroup membership of the specified task.
 func taskControlGroups(tgid, pid int) ([]controlGroup, error) {
 	filename := fmt.Sprintf("/proc/%d/task/%d/cgroup", tgid, pid)
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
