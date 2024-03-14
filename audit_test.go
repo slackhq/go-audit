@@ -3,7 +3,6 @@ package main
 import (
 	"compress/flate"
 	"errors"
-	"io/ioutil"
 	"log/syslog"
 	"net"
 	"os"
@@ -588,7 +587,7 @@ func (t *noopWriter) Write(a []byte) (int, error) {
 
 func createTempFile(t *testing.T, name string, contents string) string {
 	file := os.TempDir() + string(os.PathSeparator) + "go-audit." + name
-	if err := ioutil.WriteFile(file, []byte(contents), os.FileMode(0644)); err != nil {
+	if err := os.WriteFile(file, []byte(contents), os.FileMode(0644)); err != nil {
 		t.Fatal("Failed to create temp file", err)
 	}
 	return file
