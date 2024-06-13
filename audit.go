@@ -54,6 +54,7 @@ func loadConfig(configFile string) (*viper.Viper, error) {
 	config.SetDefault("output.gelf.compression.level", int(flate.BestSpeed))
 	config.SetDefault("output.gelf.compression.type", int(gelf.CompressGzip))
 	config.SetDefault("log.flags", 0)
+	config.SetDefault("skip_rules", false)
 
 	if err := config.ReadInConfig(); err != nil {
 		return nil, err
@@ -391,8 +392,10 @@ func main() {
 		el.Fatal(err)
 	}
 
-	if err := setRules(config, lExec); err != nil {
-		el.Fatal(err)
+	if !config.GetBool("skip_rules") {
+		if err := setRules(config, lExec); err != nil {
+			el.Fatal(err)
+		}
 	}
 
 	filters, err := createFilters(config)
