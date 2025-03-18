@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      golang-x-dependencies:
+        patterns:
+          - "golang.org/x/*"
+      protobuf-dependencies:
+        patterns:
+          - "github.com/golang/protobuf"
+          - "google.golang.org/protobuf"
