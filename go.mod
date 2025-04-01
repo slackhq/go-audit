@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/containerd/containerd v1.7.27
-	github.com/docker/docker v28.0.2+incompatible
+	github.com/docker/docker v28.0.4+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
