@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/containerd/containerd v1.7.27
+	github.com/containerd/containerd v1.7.29
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/spf13/viper v1.20.1
@@ -74,10 +74,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	google.golang.org/grpc v1.67.3 // indirect
