@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/stretchr/testify/assert"
 	"os"
+	"sync/atomic"
 	"syscall"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNetlinkClient_KeepConnection(t *testing.T) {
@@ -99,7 +101,7 @@ func TestNewNetlinkClient(t *testing.T) {
 	} else {
 		assert.True(t, (n.fd > 0), "No file descriptor")
 		assert.True(t, (n.address != nil), "Address was nil")
-		assert.Equal(t, uint32(0), n.seq, "Seq should start at 0")
+		assert.Equal(t, uint32(0), atomic.LoadUint32(&n.seq), "Seq should start at 0")
 		assert.True(t, MAX_AUDIT_MESSAGE_LENGTH >= len(n.buf), "Client buffer is too small")
 
 		assert.Equal(t, "Socket receive buffer size: ", lb.String()[:28], "Expected some nice log lines")
