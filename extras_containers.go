@@ -85,7 +85,7 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 			version = "1.24"
 		}
 		var err error
-		docker, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithVersion(version))
+		docker, err = dockerclient.New(dockerclient.FromEnv, dockerclient.WithAPIVersion(version))
 		if err != nil {
 			return nil, err
 		}
