@@ -8,9 +8,9 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
-	dockertypes "github.com/docker/docker/api/types"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/golang/groupcache/lru"
+	dockercontainer "github.com/moby/moby/api/types/container"
+	dockerclient "github.com/moby/moby/client"
 	"github.com/spf13/viper"
 )
 
@@ -77,15 +77,12 @@ func cacheSize(c Cache) int {
 func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 	var docker *dockerclient.Client
 	if config.GetBool("docker") {
-		version := config.GetString("docker_api_version")
-		if version == "" {
-			// > Docker does not recommend running versions prior to 1.12, which
-			// > means you are encouraged to use an API version of 1.24 or higher.
-			// https://docs.docker.com/develop/sdk/#api-version-matrix
-			version = "1.24"
+		ops := []dockerclient.Opt{dockerclient.FromEnv}
+		if version := config.GetString("docker_api_version"); version != "" {
+			ops = append(ops, dockerclient.WithAPIVersion(version))
 		}
 		var err error
-		docker, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithVersion(version))
+		docker, err = dockerclient.New(ops...)
 		if err != nil {
 			return nil, err
 		}
@@ -197,16 +194,17 @@ func (c ContainerParser) getPidContainerID(pid int) (string, error) {
 	return cid, err
 }
 
-func (c ContainerParser) getDockerContainer(containerID string) (dockertypes.ContainerJSON, error) {
+func (c ContainerParser) getDockerContainer(containerID string) (*dockercontainer.InspectResponse, error) {
 	if v, found := c.dockerCache.Get(containerID); found {
-		return v.(dockertypes.ContainerJSON), nil
+		return v.(*dockercontainer.InspectResponse), nil
 	}
 
-	container, err := c.docker.ContainerInspect(context.TODO(), containerID)
+	containerInspectResult, err := c.docker.ContainerInspect(context.TODO(), containerID, dockerclient.ContainerInspectOptions{})
+	container := containerInspectResult.Container
 	if err == nil {
-		c.dockerCache.Add(containerID, container)
+		c.dockerCache.Add(containerID, &container)
 	}
-	return container, err
+	return &container, err
 }
 
 func (c ContainerParser) getContainerdContainer(containerID string) (*containers.Container, error) {
