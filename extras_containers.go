@@ -77,15 +77,12 @@ func cacheSize(c Cache) int {
 func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 	var docker *dockerclient.Client
 	if config.GetBool("docker") {
-		version := config.GetString("docker_api_version")
-		if version == "" {
-			// > Docker does not recommend running versions prior to 1.12, which
-			// > means you are encouraged to use an API version of 1.24 or higher.
-			// https://docs.docker.com/develop/sdk/#api-version-matrix
-			version = "1.24"
+		ops := []dockerclient.Opt{dockerclient.FromEnv}
+		if version := config.GetString("docker_api_version"); version != "" {
+			ops = append(ops, dockerclient.WithAPIVersion(version))
 		}
 		var err error
-		docker, err = dockerclient.New(dockerclient.FromEnv, dockerclient.WithAPIVersion(version))
+		docker, err = dockerclient.New(ops...)
 		if err != nil {
 			return nil, err
 		}
