@@ -6,8 +6,8 @@ package main
 import (
 	"context"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/containers"
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/golang/groupcache/lru"
@@ -35,7 +35,7 @@ func init() {
 
 type ContainerParser struct {
 	docker     *dockerclient.Client
-	containerd *containerd.Client
+	containerd *client.Client
 
 	// map[int]string
 	//	(pid -> containerID)
@@ -91,19 +91,19 @@ func NewContainerParser(config *viper.Viper) (*ContainerParser, error) {
 		}
 	}
 
-	var containerdClient *containerd.Client
+	var containerdClient *client.Client
 	if config.GetBool("containerd") {
-		var opts []containerd.ClientOpt
+		var opts []client.Opt
 		sockAddr := config.GetString("containerd_sock")
 		if sockAddr == "" {
 			sockAddr = "/run/containerd/containerd.sock"
 		}
 		namespace := config.GetString("containerd_namespace")
 		if namespace != "" {
-			opts = append(opts, containerd.WithDefaultNamespace(namespace))
+			opts = append(opts, client.WithDefaultNamespace(namespace))
 		}
 		var err error
-		containerdClient, err = containerd.New(sockAddr, opts...)
+		containerdClient, err = client.New(sockAddr, opts...)
 		if err != nil {
 			return nil, err
 		}
