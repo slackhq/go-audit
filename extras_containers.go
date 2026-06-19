@@ -9,7 +9,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
 	"github.com/golang/groupcache/lru"
-	dockertypes "github.com/moby/moby/api/types"
+	dockercontainer "github.com/moby/moby/api/types/container"
 	dockerclient "github.com/moby/moby/client"
 	"github.com/spf13/viper"
 )
@@ -197,16 +197,17 @@ func (c ContainerParser) getPidContainerID(pid int) (string, error) {
 	return cid, err
 }
 
-func (c ContainerParser) getDockerContainer(containerID string) (dockertypes.ContainerJSON, error) {
+func (c ContainerParser) getDockerContainer(containerID string) (*dockercontainer.InspectResponse, error) {
 	if v, found := c.dockerCache.Get(containerID); found {
-		return v.(dockertypes.ContainerJSON), nil
+		return v.(*dockercontainer.InspectResponse), nil
 	}
 
-	container, err := c.docker.ContainerInspect(context.TODO(), containerID)
+	containerInspectResult, err := c.docker.ContainerInspect(context.TODO(), containerID, dockerclient.ContainerInspectOptions{})
+	container := containerInspectResult.Container
 	if err == nil {
-		c.dockerCache.Add(containerID, container)
+		c.dockerCache.Add(containerID, &container)
 	}
-	return container, err
+	return &container, err
 }
 
 func (c ContainerParser) getContainerdContainer(containerID string) (*containers.Container, error) {
