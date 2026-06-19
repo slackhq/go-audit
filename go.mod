@@ -6,8 +6,8 @@ toolchain go1.24.1
 
 require (
 	github.com/containerd/containerd v1.7.33
-	github.com/docker/docker v28.5.2+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
+	github.com/moby/moby v28.5.2+incompatible
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
@@ -33,6 +33,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.5.0 // indirect

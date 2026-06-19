@@ -8,9 +8,9 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
-	dockertypes "github.com/docker/docker/api/types"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/golang/groupcache/lru"
+	dockertypes "github.com/moby/moby/api/types"
+	dockerclient "github.com/moby/moby/client"
 	"github.com/spf13/viper"
 )
 
