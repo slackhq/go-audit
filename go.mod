@@ -6,7 +6,7 @@ require (
 	github.com/containerd/containerd/v2 v2.3.3
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.5.0
+	github.com/moby/moby/client v0.5.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
