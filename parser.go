@@ -40,7 +40,7 @@ type AuditMessageGroup struct {
 	CompleteAfter time.Time         `json:"-"`
 	Msgs          []*AuditMessage   `json:"messages"`
 	UidMap        map[string]string `json:"uid_map"`
-	Syscall       string            `json:"-"`
+	Syscall       string            `json:"syscall"`
 }
 
 // Creates a new message group from the details parsed from the message
@@ -96,7 +96,7 @@ func (amg *AuditMessageGroup) AddMessage(am *AuditMessage) {
 	amg.Msgs = append(amg.Msgs, am)
 	//TODO: need to find more message types that won't contain uids, also make these constants
 	switch am.Type {
-	case 1309, 1307, 1306:
+	case 1309, 1307, 1306, 1305:
 		// Don't map uids here
 	case 1300:
 		amg.findSyscall(am)
@@ -133,7 +133,7 @@ func (amg *AuditMessageGroup) mapUids(am *AuditMessage) {
 
 		// Don't bother re-adding if the existing group already has the mapping
 		if _, ok := amg.UidMap[uid]; !ok {
-			amg.UidMap[uid] = getUsername(data[start : start+end])
+			amg.UidMap[uid] = getUsername(uid)
 		}
 
 		// Find the next uid= if we have space for one
